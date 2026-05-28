@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Arch Recommender — Propuesta de Valor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0B0F1A;
+    --surface:  #111827;
+    --card:     #1C2438;
+    --border:   #2A3450;
+    --primary:  #FF9900;
+    --emerald:  #10B981;
+    --blue:     #3B82F6;
+    --violet:   #A855F7;
+    --cyan:     #06B6D4;
+    --amber:    #F59E0B;
+    --red:      #EF4444;
+    --text:     #F1F5F9;
+    --muted:    #94A3B8;
+    --dim:      #475569;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+
+  /* TOP NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    background: rgba(11,15,26,0.88); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 60px;
+  }
+  .nav-brand { font-weight: 800; font-size: 0.95em; background: linear-gradient(135deg,#FF9900,#FFD166); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a { font-size: 0.84em; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { background: linear-gradient(135deg,#FF9900,#E07B00); color:#000; font-weight:700; font-size:0.82em; padding:8px 20px; border-radius:8px; text-decoration:none; }
+
+  /* HERO */
+  .hero {
+    padding: 140px 48px 100px;
+    text-align: center;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255,153,0,0.10) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 35% at 80% 80%, rgba(6,182,212,0.06) 0%, transparent 55%);
+  }
+  .hero-badge {
+    display: inline-block; padding: 5px 16px; border-radius: 20px;
+    font-size: 0.75em; font-weight: 700; letter-spacing: 0.06em;
+    background: rgba(255,153,0,0.12); color: var(--primary);
+    border: 1px solid rgba(255,153,0,0.3);
+    margin-bottom: 24px;
+  }
+  .hero h1 { font-size: 3.4em; font-weight: 900; line-height: 1.1; margin-bottom: 24px; }
+  .hero h1 .grad { background: linear-gradient(135deg,#FF9900 0%,#FFD166 45%,#06B6D4 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero-sub { font-size: 1.18em; color: var(--muted); max-width: 620px; margin: 0 auto 40px; line-height: 1.65; }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary { background: linear-gradient(135deg,#FF9900,#E07B00); color:#000; font-weight:800; font-size:0.95em; padding:14px 32px; border-radius:10px; text-decoration:none; display:inline-block; box-shadow:0 6px 24px rgba(255,153,0,0.4); }
+  .btn-secondary { background: rgba(255,255,255,0.06); color:var(--text); font-weight:600; font-size:0.95em; padding:14px 32px; border-radius:10px; text-decoration:none; display:inline-block; border:1px solid var(--border); }
+  .hero-stats { display: flex; gap: 48px; justify-content: center; flex-wrap: wrap; margin-top: 64px; padding-top: 40px; border-top: 1px solid var(--border); }
+  .stat-num { font-size: 2.4em; font-weight: 900; color: var(--primary); font-variant-numeric: tabular-nums; }
+  .stat-lbl { font-size: 0.82em; color: var(--muted); margin-top: 4px; }
+
+  /* SECTIONS */
+  section { padding: 88px 48px; }
+  section:nth-child(even) { background: var(--surface); }
+  .section-label { font-size: 0.72em; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .section-label::before { content:''; width:3px; height:12px; background:var(--primary); border-radius:2px; display:inline-block; flex-shrink:0; }
+  h2 { font-size: 2.1em; font-weight: 800; line-height: 1.2; margin-bottom: 18px; }
+  h2 .hi { color: var(--primary); }
+  h3 { font-size: 1.1em; font-weight: 700; margin-bottom: 10px; }
+  p { color: var(--muted); margin-bottom: 14px; max-width: 720px; }
+  .center { text-align: center; }
+  .center p { margin-left: auto; margin-right: auto; }
+
+  /* GRID */
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-top: 40px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; margin-top: 32px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-top: 32px; }
+  @media(max-width:900px){ .grid-3{grid-template-columns:1fr 1fr;} .grid-5{grid-template-columns:repeat(3,1fr);} }
+  @media(max-width:600px){ .grid-3,.grid-2,.grid-5{grid-template-columns:1fr;} }
+
+  /* CARDS */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 26px 24px; transition: all 0.25s cubic-bezier(0.16,1,0.3,1); }
+  .card:hover { transform: translateY(-4px); border-color: rgba(255,153,0,0.3); box-shadow: 0 12px 36px rgba(0,0,0,0.4); }
+  .card .icon { font-size: 2.2em; margin-bottom: 16px; }
+  .card h3 { font-size: 1.05em; margin-bottom: 8px; }
+  .card p { font-size: 0.88em; color: var(--muted); max-width: none; }
+
+  /* PROBLEM PAIN CARDS */
+  .pain-card { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 20px 22px; }
+  .pain-card .pain-num { font-size: 2em; font-weight: 900; color: rgba(239,68,68,0.4); margin-bottom: 8px; }
+  .pain-card h3 { color: #F87171; margin-bottom: 8px; }
+  .pain-card p { font-size: 0.87em; color: var(--muted); max-width: none; }
+
+  /* SOLUTION CARDS */
+  .sol-card { background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 20px 22px; }
+  .sol-card .sol-icon { font-size: 1.6em; margin-bottom: 10px; }
+  .sol-card h3 { color: var(--emerald); margin-bottom: 8px; }
+  .sol-card p { font-size: 0.87em; color: var(--muted); max-width: none; }
+
+  /* ARCH CARDS */
+  .arch-card { border-radius: 14px; padding: 20px; text-align: center; }
+  .arch-card .arch-icon { font-size: 2em; margin-bottom: 10px; }
+  .arch-card .arch-name { font-weight: 700; font-size: 0.92em; margin-bottom: 6px; }
+  .arch-card .arch-cost { font-size: 0.78em; font-weight: 600; margin-bottom: 4px; }
+  .arch-card .arch-desc { font-size: 0.76em; color: var(--dim); }
+
+  /* ROI TABLE */
+  table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 0.88em; }
+  th { background: rgba(255,153,0,0.08); color: var(--primary); font-weight: 700; font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 16px; text-align: left; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.015); }
+  .td-hi { color: var(--emerald); font-weight: 700; }
+  .td-name { color: var(--text); font-weight: 600; }
+
+  /* QUOTE */
+  .quote {
+    background: linear-gradient(135deg, rgba(255,153,0,0.07), rgba(6,182,212,0.04));
+    border: 1px solid rgba(255,153,0,0.25); border-radius: 16px;
+    padding: 32px 36px; margin: 40px 0; text-align: center;
+  }
+  .quote-text { font-size: 1.35em; font-weight: 600; line-height: 1.55; color: var(--text); margin-bottom: 16px; }
+  .quote-text em { color: var(--primary); font-style: normal; }
+  .quote-src { font-size: 0.82em; color: var(--dim); }
+
+  /* PROCESS STEPS */
+  .process { display: flex; gap: 0; margin: 36px 0; position: relative; }
+  .process::before { content:''; position:absolute; top:20px; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--border),var(--primary),var(--border)); }
+  .process-step { flex: 1; text-align: center; position: relative; padding: 0 8px; }
+  .step-circle { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#FF9900,#E07B00); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.9em; color:#000; margin:0 auto 14px; position:relative; z-index:1; box-shadow:0 0 20px rgba(255,153,0,0.4); }
+  .step-title { font-weight:700; font-size:0.87em; margin-bottom:6px; }
+  .step-desc { font-size:0.78em; color:var(--dim); }
+
+  /* COMPARISON */
+  .vs-table { background:var(--card); border-radius:14px; overflow:hidden; border:1px solid var(--border); margin:24px 0; }
+  .vs-table table { margin:0; font-size:0.86em; }
+  .vs-table th { background:rgba(28,36,56,0.8); color:var(--muted); }
+  .vs-check { color:var(--emerald); font-weight:700; }
+  .vs-cross { color:var(--red); }
+
+  /* USE CASES */
+  .use-case { display:flex; gap:18px; padding:18px 0; border-bottom:1px solid var(--border); }
+  .use-case:last-child { border-bottom:none; }
+  .uc-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.4em; flex-shrink:0; }
+  .uc-body h3 { font-size:0.95em; margin-bottom:4px; }
+  .uc-body p { font-size:0.85em; margin-bottom:0; max-width:none; }
+  .uc-badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:0.72em; font-weight:600; margin-top:6px; }
+
+  /* CTA SECTION */
+  .cta-section { background: linear-gradient(135deg, rgba(255,153,0,0.08), rgba(6,182,212,0.05)); padding: 88px 48px; text-align: center; border-top: 1px solid var(--border); }
+
+  /* FOOTER */
+  footer { background: #060A12; padding: 36px 48px; text-align:center; font-size:0.82em; color:var(--dim); border-top:1px solid var(--border); }
+
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav>
+  <div class="nav-brand">🏗️ ML Arch Recommender</div>
+  <div class="nav-links">
+    <a href="#problema">El problema</a>
+    <a href="#solucion">La solución</a>
+    <a href="#valor">Propuesta de valor</a>
+    <a href="#casos">Casos de uso</a>
+    <a href="#arquitecturas">Arquitecturas</a>
+    <a href="#roi">ROI</a>
+  </div>
+  <a class="nav-cta" href="#demo">Ver demo</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">🚀 PRODUCTO DE INTELIGENCIA ARTIFICIAL APLICADA</div>
+  <h1>
+    Decide en segundos<br>
+    <span class="grad">dónde desplegar tu modelo ML</span>
+  </h1>
+  <p class="hero-sub">
+    El ML Arch Recommender evalúa automáticamente 5 patrones de despliegue en AWS y te entrega la arquitectura óptima con justificación, análisis de costos y guía de implementación lista para producción.
+  </p>
+  <div class="hero-ctas">
+    <a class="btn-primary" href="#demo">Ver la herramienta en acción</a>
+    <a class="btn-secondary" href="#valor">¿Por qué importa?</a>
+  </div>
+  <div class="hero-stats">
+    <div>
+      <div class="stat-num">5</div>
+      <div class="stat-lbl">Patrones de despliegue evaluados</div>
+    </div>
+    <div>
+      <div class="stat-num">5</div>
+      <div class="stat-lbl">Criterios ponderados</div>
+    </div>
+    <div>
+      <div class="stat-num">&lt; 1s</div>
+      <div class="stat-lbl">Tiempo de recomendación</div>
+    </div>
+    <div>
+      <div class="stat-num">$0</div>
+      <div class="stat-lbl">Costo mínimo de arquitectura</div>
+    </div>
+    <div>
+      <div class="stat-num">HTTPS</div>
+      <div class="stat-lbl">Disponible en la nube</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEMA -->
+<section id="problema">
+  <div class="section-label">El problema</div>
+  <h2>Llevar un modelo a producción<br><span class="hi">sigue siendo demasiado difícil</span></h2>
+  <p>Los equipos de datos saben construir modelos. Pero decidir <em>cómo</em> y <em>dónde</em> desplegarlos en la nube sigue siendo una barrera técnica, costosa y poco explorada en la mayoría de organizaciones.</p>
+
+  <div class="grid-3" style="margin-top:36px">
+    <div class="pain-card">
+      <div class="pain-num">01</div>
+      <h3>Decisiones sin criterio</h3>
+      <p>Los equipos eligen arquitecturas por familiaridad o moda, no por métricas objetivas. Resultado: sobredimensionamiento costoso o subdespliegue que falla bajo carga.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-num">02</div>
+      <h3>Consultoría costosa y lenta</h3>
+      <p>Una arquitectura correctamente diseñada por un cloud architect sénior puede costar entre $5 000 y $20 000 USD, con tiempos de entrega de semanas o meses.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-num">03</div>
+      <h3>Brecha entre ciencia de datos y DevOps</h3>
+      <p>Los data scientists no hablan el idioma de la infraestructura cloud. El resultado es una pared invisible entre el notebook y producción que retrasa proyectos enteros.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-num">04</div>
+      <h3>Costos imprevistos en AWS</h3>
+      <p>Elegir la arquitectura equivocada puede multiplicar el costo de infraestructura por 10x. Un endpoint SageMaker mal configurado puede costar $500/mes en lugar de $5/mes.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-num">05</div>
+      <h3>Tiempo al mercado perdido</h3>
+      <p>Cada semana de indecisión sobre infraestructura es una semana de ventaja competitiva cedida. En sectores como fintech o retail, esto se traduce en ingresos perdidos.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-num">06</div>
+      <h3>Sin guía de implementación</h3>
+      <p>Incluso cuando se elige la arquitectura correcta, los equipos no tienen el código base, los roles IAM ni los pasos exactos para llevarla a producción con seguridad.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUCIÓN -->
+<section id="solucion" style="background:var(--surface)">
+  <div class="section-label">La solución</div>
+  <h2>Un asesor inteligente que <span class="hi">decide en segundos</span></h2>
+  <p>El ML Arch Recommender actúa como un arquitecto cloud sénior encapsulado en software: aplica una base de conocimiento codificada con 25 años de prácticas reales de AWS para evaluar, justificar y guiar la decisión de despliegue en tiempo real.</p>
+
+  <div class="process" style="margin-top:48px">
+    <div class="process-step">
+      <div class="step-circle">1</div>
+      <div class="step-title">Configura</div>
+      <div class="step-desc">8 parámetros de tu modelo y organización</div>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">2</div>
+      <div class="step-title">Analiza</div>
+      <div class="step-desc">El motor evalúa 5 × 5 = 25 combinaciones criterio-arquitectura</div>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">3</div>
+      <div class="step-title">Recomienda</div>
+      <div class="step-desc">Recibe el ranking con justificación y nivel de confianza</div>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">4</div>
+      <div class="step-title">Valida</div>
+      <div class="step-desc">Verifica si tus servicios AWS actuales soportan la arquitectura</div>
+    </div>
+    <div class="process-step">
+      <div class="step-circle">5</div>
+      <div class="step-title">Implementa</div>
+      <div class="step-desc">Descarga la guía con código, IAM y comandos de despliegue</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:48px">
+    <div class="sol-card">
+      <div class="sol-icon">📊</div>
+      <h3>Scoring objetivo y transparente</h3>
+      <p>Cada arquitectura recibe una puntuación numérica del 1 al 10 en 5 criterios. Los pesos son visibles y ajustables. No hay caja negra.</p>
+    </div>
+    <div class="sol-card">
+      <div class="sol-icon">🔍</div>
+      <h3>Análisis de viabilidad empresarial</h3>
+      <p>Verifica si la arquitectura recomendada es implementable con los servicios AWS que tu empresa ya tiene contratados o autorizados, con sustitutos cuando aplica.</p>
+    </div>
+    <div class="sol-card">
+      <div class="sol-icon">📘</div>
+      <h3>Guía lista para producción</h3>
+      <p>Estructura de proyecto, código base funcional, variables de entorno, comandos de despliegue y roles IAM con principio de mínimo privilegio, todo personalizado para tu caso.</p>
+    </div>
+    <div class="sol-card">
+      <div class="sol-icon">⚡</div>
+      <h3>Respuesta en menos de 1 segundo</h3>
+      <p>El motor es completamente local — sin llamadas a APIs externas, sin latencia de red, sin costo de inferencia. Funciona sin conexión a internet.</p>
+    </div>
+    <div class="sol-card">
+      <div class="sol-icon">🌐</div>
+      <h3>Acceso web con HTTPS</h3>
+      <p>Disponible desde cualquier dispositivo con navegador. Sin instalaciones, sin configuración. Compartible con un enlace para evaluación por stakeholders.</p>
+    </div>
+    <div class="sol-card">
+      <div class="sol-icon">📂</div>
+      <h3>Configuración reproducible con YAML</h3>
+      <p>Exporta e importa la configuración de cualquier caso en un archivo YAML estándar. Perfecto para auditorías, comparaciones y automatización.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROPUESTA DE VALOR -->
+<section id="valor">
+  <div class="section-label">Propuesta de valor</div>
+  <h2>¿Por qué el <span class="hi">ML Arch Recommender</span><br>cambia las reglas del juego?</h2>
+
+  <div class="quote">
+    <div class="quote-text">
+      &ldquo;La diferencia entre una arquitectura correcta e incorrecta no es técnica.<br>
+      Es la diferencia entre un modelo que <em>llega a producción</em> y uno que se queda en un notebook.&rdquo;
+    </div>
+    <div class="quote-src">— Filosofía del producto</div>
+  </div>
+
+  <div class="vs-table">
+    <table>
+      <tr>
+        <th>Criterio</th>
+        <th>Sin ML Arch Recommender</th>
+        <th style="color:var(--emerald)">Con ML Arch Recommender</th>
+      </tr>
+      <tr>
+        <td class="td-name">Tiempo de decisión</td>
+        <td>3–8 semanas (consultor o investigación propia)</td>
+        <td class="td-hi">&lt; 60 segundos</td>
+      </tr>
+      <tr>
+        <td class="td-name">Costo de la decisión</td>
+        <td>$5 000–$20 000 USD (consultoría externa)</td>
+        <td class="td-hi">$0 — completamente gratuito</td>
+      </tr>
+      <tr>
+        <td class="td-name">Justificación</td>
+        <td>Opinión del arquitecto, difícil de auditar</td>
+        <td class="td-hi">Score cuantitativo con desglose por criterio</td>
+      </tr>
+      <tr>
+        <td class="td-name">Restricciones detectadas</td>
+        <td>Manual, depende de la experiencia del arquitecto</td>
+        <td class="td-hi">Automático: incompatibilidades y tensiones señaladas</td>
+      </tr>
+      <tr>
+        <td class="td-name">Viabilidad con servicios actuales</td>
+        <td>Requiere revisión manual del catálogo AWS</td>
+        <td class="td-hi">Análisis automático con sustitutos propuestos</td>
+      </tr>
+      <tr>
+        <td class="td-name">Guía de implementación</td>
+        <td>Documentación dispersa, sin código ni IAM</td>
+        <td class="td-hi">Código + comandos + IAM completo y personalizado</td>
+      </tr>
+      <tr>
+        <td class="td-name">Accesibilidad</td>
+        <td>Solo disponible para equipos con DevOps</td>
+        <td class="td-hi">Cualquier data scientist desde el navegador</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- CASOS DE USO -->
+<section id="casos" style="background:var(--surface)">
+  <div class="section-label">Casos de uso</div>
+  <h2>Diseñado para <span class="hi">casos reales</span> del sector financiero y más</h2>
+  <p>El motor fue calibrado con escenarios reales de despliegue de modelos ML. Tres casos de referencia incluidos:</p>
+
+  <div style="margin-top:32px; background:var(--card); border-radius:16px; border:1px solid var(--border); padding:8px 28px;">
+    <div class="use-case">
+      <div class="uc-icon" style="background:rgba(16,185,129,0.1)">💳</div>
+      <div class="uc-body">
+        <h3>Fintech de microcréditos — aprobación en app móvil</h3>
+        <p>Modelo de riesgo crediticio que responde en &lt; 800 ms. Baja frecuencia (menos de 1 000 solicitudes/día), presupuesto startup ($30/mes), equipo técnico medio. El motor recomienda Serverless con 9.6/10 de confianza. Costo real: &lt; $1/mes con el free tier de AWS.</p>
+        <span class="uc-badge" style="background:rgba(16,185,129,0.1);color:#10B981;border:1px solid rgba(16,185,129,0.3)">⚡ Serverless recomendado</span>
+        <span class="uc-badge" style="background:rgba(255,153,0,0.1);color:#FF9900;border:1px solid rgba(255,153,0,0.3);margin-left:8px">$0–1/mes</span>
+      </div>
+    </div>
+    <div class="use-case">
+      <div class="uc-icon" style="background:rgba(59,130,246,0.1)">🏦</div>
+      <div class="uc-body">
+        <h3>Banco tradicional — rescoring nocturno de cartera</h3>
+        <p>Millones de clientes reclasificados cada noche. Latencia tolerada de 24 horas, alta escalabilidad requerida, equipo técnico experimentado, presupuesto corporativo ($300/mes). Batch Processing en S3 + Glue es la elección natural con 9/10. Costo: ~$0.50–$5/mes según frecuencia de jobs.</p>
+        <span class="uc-badge" style="background:rgba(59,130,246,0.1);color:#3B82F6;border:1px solid rgba(59,130,246,0.3)">📦 Batch recomendado</span>
+        <span class="uc-badge" style="background:rgba(255,153,0,0.1);color:#FF9900;border:1px solid rgba(255,153,0,0.3);margin-left:8px">$0.50–$50/mes</span>
+      </div>
+    </div>
+    <div class="use-case">
+      <div class="uc-icon" style="background:rgba(168,85,247,0.1)">🚨</div>
+      <div class="uc-body">
+        <h3>Plataforma de pagos — detección de fraude en tiempo real</h3>
+        <p>Cada transacción debe ser evaluada en &lt; 200 ms las 24 horas. Frecuencia continua, alta escalabilidad, presupuesto disponible ($500/mes), equipo cloud-native. Streaming con Kinesis + Lambda es el único patrón compatible. Costo estimado: ~$100/mes.</p>
+        <span class="uc-badge" style="background:rgba(168,85,247,0.1);color:#A855F7;border:1px solid rgba(168,85,247,0.3)">🌊 Streaming recomendado</span>
+        <span class="uc-badge" style="background:rgba(255,153,0,0.1);color:#FF9900;border:1px solid rgba(255,153,0,0.3);margin-left:8px">~$100/mes</span>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:28px">El sistema es aplicable a <b style="color:var(--text)">cualquier sector</b>: retail (propensión a compra), salud (diagnóstico asistido), telecomunicaciones (churn prediction), logística (optimización de rutas), AML/compliance y más.</p>
+</section>
+
+<!-- ARQUITECTURAS -->
+<section id="arquitecturas">
+  <div class="section-label">Arquitecturas evaluadas</div>
+  <h2>5 patrones de despliegue, <span class="hi">una decisión objetiva</span></h2>
+  <p>El motor evalúa simultáneamente todos los patrones relevantes para modelos ML en AWS y los ordena por idoneidad para tu caso específico.</p>
+
+  <div class="grid-5" style="margin-top:40px">
+    <div class="arch-card" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:3px solid #10B981">
+      <div class="arch-icon">⚡</div>
+      <div class="arch-name" style="color:#10B981">Serverless</div>
+      <div class="arch-cost" style="color:var(--primary)">$0–$1/mes</div>
+      <div class="arch-desc">Lambda + API Gateway + S3. Ideal para bajo volumen y respuesta rápida.</div>
+    </div>
+    <div class="arch-card" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-top:3px solid #3B82F6">
+      <div class="arch-icon">📦</div>
+      <div class="arch-name" style="color:#3B82F6">Batch</div>
+      <div class="arch-cost" style="color:var(--primary)">$0.50–$50/mes</div>
+      <div class="arch-desc">Glue + S3 + EventBridge. Scoring masivo diferido, altamente eficiente.</div>
+    </div>
+    <div class="arch-card" style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.25);border-top:3px solid #A855F7">
+      <div class="arch-icon">🌊</div>
+      <div class="arch-name" style="color:#A855F7">Streaming</div>
+      <div class="arch-cost" style="color:var(--primary)">~$100/mes</div>
+      <div class="arch-desc">Kinesis + Lambda + DynamoDB. Fraude y eventos en tiempo real.</div>
+    </div>
+    <div class="arch-card" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-top:3px solid #F59E0B">
+      <div class="arch-icon">🐳</div>
+      <div class="arch-name" style="color:#F59E0B">Containers</div>
+      <div class="arch-cost" style="color:var(--primary)">~$80/mes</div>
+      <div class="arch-desc">ECS Fargate + ALB. APIs persistentes con control total del entorno.</div>
+    </div>
+    <div class="arch-card" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.25);border-top:3px solid #06B6D4">
+      <div class="arch-icon">🧠</div>
+      <div class="arch-name" style="color:#06B6D4">SageMaker</div>
+      <div class="arch-cost" style="color:var(--primary)">~$150/mes</div>
+      <div class="arch-desc">SageMaker Endpoint. MLOps maduro, A/B testing, drift monitoring.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROI -->
+<section id="roi" style="background:var(--surface)">
+  <div class="section-label">Retorno de inversión</div>
+  <h2>El costo de <span class="hi">no tener esta herramienta</span></h2>
+
+  <div class="grid-2" style="margin-top:36px">
+    <div>
+      <h3 style="color:var(--emerald);margin-bottom:16px">💰 Ahorro tangible en costos</h3>
+      <table>
+        <tr><th>Escenario</th><th>Sin herramienta</th><th>Con herramienta</th></tr>
+        <tr><td class="td-name">MVP Fintech (baja frecuencia)</td><td>SageMaker elegido por defecto: $456/año</td><td class="td-hi">Serverless: $0–12/año</td></tr>
+        <tr><td class="td-name">Banco (batch nocturno)</td><td>Containers siempre activos: $1 800/año</td><td class="td-hi">Batch S3+Glue: $60/año</td></tr>
+        <tr><td class="td-name">Consultoría de arquitectura</td><td>$5 000–$20 000 por proyecto</td><td class="td-hi">$0 — ilimitado</td></tr>
+        <tr><td class="td-name">Re-arquitectura por error</td><td>4–8 semanas de trabajo técnico</td><td class="td-hi">Decisión correcta desde el inicio</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 style="color:var(--primary);margin-bottom:16px">⏱ Ahorro en tiempo</h3>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:var(--muted);font-size:0.88em">Investigación y decisión tradicional</span>
+          <span style="color:var(--red);font-weight:700">3–8 semanas</span>
+        </div>
+        <div style="background:rgba(239,68,68,0.15);height:8px;border-radius:4px;width:100%"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:var(--muted);font-size:0.88em">Con ML Arch Recommender</span>
+          <span style="color:var(--emerald);font-weight:700">&lt; 60 segundos</span>
+        </div>
+        <div style="background:rgba(16,185,129,0.15);height:8px;border-radius:4px;width:0.5%"></div>
+      </div>
+      <p style="margin-top:16px;font-size:0.88em">En una organización que despliega <b style="color:var(--text)">4 modelos al año</b>, esto representa <b style="color:var(--primary)">hasta 32 semanas de ingeniería</b> liberadas para construir, no para decidir.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DIFERENCIADORES -->
+<section>
+  <div class="section-label">Por qué elegirnos</div>
+  <h2>Construido con <span class="hi">rigor académico</span><br>y criterio industrial</h2>
+  <div class="grid-3">
+    <div class="card">
+      <div class="icon">🎓</div>
+      <h3>Base de conocimiento codificada</h3>
+      <p>Cada score y umbral está respaldado por documentación oficial de AWS y prácticas reales de arquitectura cloud en producción. No es una heurística genérica.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔍</div>
+      <h3>Transparencia total</h3>
+      <p>El usuario ve exactamente por qué se recomienda cada arquitectura, cuál fue el criterio decisivo y con qué nivel de confianza. No hay cajas negras.</p>
+    </div>
+    <div class="card">
+      <div class="icon">⚡</div>
+      <h3>Pesos adaptativos</h3>
+      <p>El motor detecta perfiles especiales (startup, equipo sin experiencia) y rebalancea automáticamente los pesos para priorizar lo que realmente importa en cada contexto.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔒</div>
+      <h3>Seguridad desde el diseño</h3>
+      <p>Las guías de implementación incluyen roles IAM con principio de mínimo privilegio, gestión de secretos en AWS Secrets Manager y separación de responsabilidades.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🌐</div>
+      <h3>Sin dependencias externas</h3>
+      <p>El motor de IA es completamente local. Sin APIs de terceros, sin costos de inferencia, sin datos enviados a servicios externos. Funciona en modo offline.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📈</div>
+      <h3>Extensible</h3>
+      <p>La arquitectura permite agregar nuevos patrones de despliegue, nuevos criterios de evaluación o integrar con APIs de AWS para validación en tiempo real del catálogo de servicios.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section" id="demo">
+  <div class="section-label" style="justify-content:center">Próximos pasos</div>
+  <h2 style="font-size:2.6em">Listo para decidir <span class="hi">mejor y más rápido</span></h2>
+  <p style="font-size:1.05em;max-width:560px;margin:0 auto 36px">El ML Arch Recommender está disponible ahora mismo en la web. Pruébalo con tu propio caso de uso en menos de 2 minutos.</p>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+    <a class="btn-primary" href="http://localhost:8501" target="_blank">🚀 Abrir la aplicación</a>
+    <a class="btn-secondary" href="technical_reference.html">📖 Ver documentación técnica</a>
+    <a class="btn-secondary" href="user_guide.html">📋 Guía de usuario</a>
+  </div>
+  <div style="margin-top:48px;display:flex;gap:40px;justify-content:center;flex-wrap:wrap;font-size:0.85em;color:var(--dim)">
+    <span>✓ Sin registro requerido</span>
+    <span>✓ Sin tarjeta de crédito</span>
+    <span>✓ HTTPS gratuito</span>
+    <span>✓ Código abierto</span>
+  </div>
+</div>
+
+<footer>
+  <p>ML Arch Recommender &nbsp;·&nbsp; Universidad Central de Colombia &nbsp;·&nbsp; 2026</p>
+  <p style="margin-top:6px">Desarrollado como proyecto académico de Inteligencia Artificial Aplicada a Arquitecturas Cloud</p>
+</footer>
+
+</body>
+</html>

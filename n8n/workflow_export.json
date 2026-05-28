@@ -1,0 +1,86 @@
+{
+  "name": "ML Architecture Recommender — Credit Risk Demo",
+  "nodes": [
+    {
+      "id": "node_webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "path": "recomendar-arquitectura",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "description": "Recibe el caso de negocio y los datos de prueba desde el cliente (formulario, Postman, etc.)"
+    },
+    {
+      "id": "node_validate",
+      "name": "Validar Input",
+      "type": "n8n-nodes-base.code",
+      "position": [450, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst caso = body.caso_negocio;\nconst requeridos = ['latencia_requerida_ms','frecuencia_inferencia','presupuesto_mensual_usd','escalabilidad_requerida','experiencia_tecnica'];\nconst faltantes = requeridos.filter(k => caso[k] === undefined);\nif (faltantes.length > 0) throw new Error(`Campos faltantes: ${faltantes.join(', ')}`);\nreturn [{ json: body }];"
+      }
+    },
+    {
+      "id": "node_scoring",
+      "name": "Motor de Recomendación",
+      "type": "n8n-nodes-base.code",
+      "position": [650, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const input = $input.first().json;\nconst caso = input.caso_negocio;\n\nconst PESOS = { latencia: 0.25, frecuencia: 0.25, presupuesto: 0.20, escalabilidad: 0.15, experiencia: 0.15 };\n\nconst LATENCIA = {\n  serverless:  caso.latencia_requerida_ms <= 1000 ? 9 : 4,\n  batch:       caso.latencia_requerida_ms <= 1000 ? 1 : 9,\n  streaming:   caso.latencia_requerida_ms <= 1000 ? 8 : 6,\n  containers:  7,\n  sagemaker:   caso.latencia_requerida_ms <= 1000 ? 8 : 7\n};\n\nconst FRECUENCIA = {\n  baja:    { serverless:10, batch:8, streaming:2,  containers:4,  sagemaker:5  },\n  media:   { serverless:8,  batch:5, streaming:7,  containers:8,  sagemaker:8  },\n  alta:    { serverless:5,  batch:2, streaming:10, containers:9,  sagemaker:9  },\n  continua:{ serverless:3,  batch:1, streaming:10, containers:9,  sagemaker:8  }\n};\n\nconst PRESUPUESTO = {\n  serverless: caso.presupuesto_mensual_usd <= 100 ? 10 : 8,\n  batch:      caso.presupuesto_mensual_usd <= 100 ? 8  : 7,\n  streaming:  caso.presupuesto_mensual_usd <= 100 ? 5  : 7,\n  containers: caso.presupuesto_mensual_usd <= 100 ? 4  : 7,\n  sagemaker:  caso.presupuesto_mensual_usd <= 100 ? 2  : 6\n};\n\nconst ESCALABILIDAD = {\n  baja:  { serverless:9, batch:8, streaming:5, containers:6, sagemaker:6 },\n  media: { serverless:9, batch:6, streaming:8, containers:8, sagemaker:8 },\n  alta:  { serverless:7, batch:4, streaming:9, containers:9, sagemaker:9 }\n};\n\nconst EXPERIENCIA = {\n  baja:  { serverless:7, batch:5, streaming:3, containers:2, sagemaker:6 },\n  media: { serverless:9, batch:7, streaming:6, containers:6, sagemaker:7 },\n  alta:  { serverless:8, batch:8, streaming:9, containers:9, sagemaker:9 }\n};\n\nconst META = {\n  serverless:  { nombre:'Serverless (Lambda + API Gateway)', servicios:['AWS Lambda','API Gateway','S3'] },\n  batch:       { nombre:'Batch Processing (S3 + Glue)',       servicios:['Amazon S3','AWS Glue','EventBridge'] },\n  streaming:   { nombre:'Streaming (Kinesis + Lambda)',       servicios:['Amazon Kinesis','Lambda','DynamoDB'] },\n  containers:  { nombre:'Containers (ECS Fargate + ALB)',     servicios:['ECS Fargate','ALB','ECR'] },\n  sagemaker:   { nombre:'SageMaker Managed Endpoint',         servicios:['SageMaker','API Gateway','CloudWatch'] }\n};\n\nconst frecMap = FRECUENCIA[caso.frecuencia_inferencia] || FRECUENCIA.media;\nconst escMap  = ESCALABILIDAD[caso.escalabilidad_requerida] || ESCALABILIDAD.media;\nconst expMap  = EXPERIENCIA[caso.experiencia_tecnica] || EXPERIENCIA.media;\n\nconst ranking = Object.keys(META).map(id => {\n  const d = {\n    latencia:      LATENCIA[id],\n    frecuencia:    frecMap[id],\n    presupuesto:   PRESUPUESTO[id],\n    escalabilidad: escMap[id],\n    experiencia:   expMap[id]\n  };\n  const score = Object.keys(PESOS).reduce((sum, k) => sum + d[k] * PESOS[k], 0);\n  return { id, ...META[id], score_total: +score.toFixed(3), desglose: d };\n}).sort((a,b) => b.score_total - a.score_total).map((a,i) => ({...a, posicion: i+1}));\n\nconst top = ranking[0];\nconst confianza = Math.min((top.score_total - ranking[1].score_total) / 10 * 5, 1);\n\nreturn [{ json: {\n  recomendacion: {\n    arquitectura_id: top.id,\n    arquitectura_nombre: top.nombre,\n    servicios_aws: top.servicios,\n    score: top.score_total,\n    confianza: +confianza.toFixed(2),\n    justificacion: `'${top.nombre}' obtuvo score ${top.score_total}/10. Destacó en latencia (${top.desglose.latencia}/10), frecuencia '${caso.frecuencia_inferencia}' (${top.desglose.frecuencia}/10) y presupuesto $${caso.presupuesto_mensual_usd}/mes (${top.desglose.presupuesto}/10).`,\n    ranking_completo: ranking\n  },\n  endpoint_demo: $env.API_ENDPOINT || 'https://CONFIGURA_TU_ENDPOINT.execute-api.us-east-1.amazonaws.com/prod/predict',\n  datos_prueba: input.datos_prueba,\n  timestamp: new Date().toISOString()\n}}];"
+      }
+    },
+    {
+      "id": "node_http",
+      "name": "Llamar Endpoint AWS",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [850, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.endpoint_demo }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "body", "value": "={{ JSON.stringify($json.datos_prueba) }}" }
+          ]
+        },
+        "options": { "timeout": 15000 }
+      }
+    },
+    {
+      "id": "node_merge",
+      "name": "Consolidar Respuesta",
+      "type": "n8n-nodes-base.code",
+      "position": [1050, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const rec = $('Motor de Recomendación').first().json;\nconst inference = $input.first().json;\nreturn [{ json: {\n  recomendacion: rec.recomendacion,\n  resultado_inferencia_aws: {\n    riesgo: inference.riesgo,\n    probabilidad_riesgo_alto: inference.probabilidad_riesgo_alto,\n    modelo_version: inference.modelo_version,\n    arquitectura_despliegue: inference.arquitectura_despliegue\n  },\n  datos_enviados: rec.datos_prueba,\n  timestamp: rec.timestamp,\n  validacion: {\n    arquitectura_recomendada: rec.recomendacion.arquitectura_id,\n    endpoint_disponible: true,\n    inferencia_exitosa: !!inference.riesgo\n  }\n}}];"
+      }
+    },
+    {
+      "id": "node_response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1250, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger":           { "main": [[{ "node": "Validar Input",            "type": "main", "index": 0 }]] },
+    "Validar Input":             { "main": [[{ "node": "Motor de Recomendación",   "type": "main", "index": 0 }]] },
+    "Motor de Recomendación":    { "main": [[{ "node": "Llamar Endpoint AWS",      "type": "main", "index": 0 }]] },
+    "Llamar Endpoint AWS":       { "main": [[{ "node": "Consolidar Respuesta",     "type": "main", "index": 0 }]] },
+    "Consolidar Respuesta":      { "main": [[{ "node": "Webhook Response",         "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Agente de recomendación de arquitecturas ML en AWS — Demo Tesis",
+    "version": "1.0.0"
+  }
+}

@@ -1,0 +1,60 @@
+[project]
+name = "ml-arch-recommender"
+version = "0.1.0"
+description = "Agente inteligente para recomendación de arquitecturas de despliegue ML en AWS"
+authors = [
+    {name = "Diana Cabrera", email = "diana.cabrera@mercadolibre.com.co"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "scikit-learn>=1.4.0",
+    "numpy>=1.26.0",
+    "joblib>=1.3.0",
+    "boto3>=1.34.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.7.0",
+    "pyyaml>=6.0",
+    "streamlit>=1.35.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+]
+
+[project.scripts]
+train-model = "ml_arch_recommender.model.train:main"
+validate = "ml_arch_recommender.validation.validate_agent:main"
+test-endpoint = "ml_arch_recommender.validation.test_endpoint:main"
+demo = "ml_arch_recommender.demo:main"
+
+[tool.poetry]
+packages = [{include = "ml_arch_recommender", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=ml_arch_recommender --cov-report=term-missing"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.3,<10.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)"
+]

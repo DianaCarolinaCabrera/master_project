@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# model_config.yaml — Contrato entre el modelo entrenado y el handler Lambda
+#
+# Este archivo reemplaza cualquier parámetro hardcodeado en el código.
+# Cuando cambias de modelo, solo actualizas este YAML y subes el nuevo artefacto.
+# El handler Lambda lo carga en el próximo cold start — sin redesplegar código.
+#
+# Uso:
+#   1. Completa este archivo con los parámetros de tu modelo
+#   2. Sube el config:  aws s3 cp configs/model_config.yaml s3://TU-BUCKET/models/config.yaml
+#   3. Sube el modelo:  aws s3 cp mi_modelo.joblib s3://TU-BUCKET/models/
+#   4. El Lambda lo carga automáticamente en el siguiente cold start
+# ─────────────────────────────────────────────────────────────────────────────
+
+model:
+  name: "mi-modelo-financiero"         # Nombre descriptivo (aparece en las respuestas del API)
+  framework: "sklearn"                  # sklearn | xgboost | lightgbm
+  version: "1.0.0"                      # Versión del artefacto — para trazabilidad
+  tipo: "clasificacion_binaria"         # Tipo de modelo — usado por el agente recomendador
+                                        # Valores válidos:
+                                        #   clasificacion_binaria  → riesgo crédito, fraude, churn
+                                        #   propensity_scoring     → propensidad a comprar/usar
+                                        #   regression             → predicción de monto, LTV
+                                        #   clustering             → segmentación de clientes
+                                        #   deteccion_fraude       → fraude transaccional
+                                        #   scoring_credito        → scoring crediticio
+                                        #   churn                  → retención de clientes
+                                        #   aml                    → lavado de dinero
+  sector: "financiero"
+  description: "Descripción de qué predice este modelo y para qué negocio"
+
+
+paths:
+  # Ruta dentro del bucket S3 al artefacto del modelo (relativa a la raíz del bucket)
+  # Para sklearn Pipeline completo (con scaler incluido): .joblib generado con joblib.dump()
+  # Para XGBoost: .ubj o .json generado con model.save_model()
+  # Para LightGBM: .txt generado con model.save_model()
+  model_file: "models/mi_modelo.joblib"
+
+  # Scaler separado (opcional)
+  #   null → el Pipeline ya incluye el preprocesador (StandardScaler dentro del Pipeline sklearn)
+  #          Esta es la opción recomendada con sklearn Pipelines.
+  #   "models/scaler.pkl" → scaler serializado por separado con joblib.dump(scaler, ...)
+  #                         Necesario si tu modelo NO es un Pipeline sino solo el estimador.
+  scaler_file: null
+
+
+# Lista completa de features en el MISMO ORDEN que durante el entrenamiento.
+# El request JSON puede llegar con los campos en cualquier orden —
+# el handler siempre construye el numpy array en este orden exacto.
+#
+# Ejemplo real (modelo de propensidad MercadoPago con 150+ features):
+#   features:
+#     - "PAY_TPV_SEL_L60D"
+#     - "MAF_MAC_TPN_RATIO_L90D"
+#     - ...
+#
+# Ejemplo simple (modelo de riesgo crediticio con 5 features):
+#   features:
+#     - "edad"
+#     - "ingresos_mensuales"
+#     - "ratio_deuda"
+#     - "meses_historial_crediticio"
+#     - "num_cuentas_activas"
+features:
+  - "feature_1"
+  - "feature_2"
+  - "feature_3"
+  # Agrega aquí todas las features de tu modelo en el orden de entrenamiento
+
+
+inference:
+  # Umbral de clasificación binaria (probabilidad >= threshold → clase positiva)
+  threshold: 0.5
+
+  # true  → el response incluye las probabilidades de cada clase
+  # false → el response solo incluye la clase predicha
+  return_proba: true
+
+  # Etiquetas para las clases en el output de la API
+  # Clave = índice de clase (int), Valor = etiqueta que aparece en la respuesta JSON
+  # Ejemplos por caso de uso:
+  #   Riesgo crediticio:   0: "BAJO"        1: "ALTO"
+  #   Detección fraude:    0: "LEGITIMO"    1: "FRAUDE"
+  #   Churn:               0: "RETENIDO"    1: "CHURN"
+  #   Propensidad:         0: "BAJA"        1: "ALTA"
+  #   AML:                 0: "NORMAL"      1: "SOSPECHOSO"
+  output_labels:
+    0: "NEGATIVO"
+    1: "POSITIVO"
+
+  # (Opcional) Cortes para scoring/rating en lugar de clasificación binaria
+  # Útil para modelos de propensidad donde se quiere un score 1-10
+  # Si no aplica, eliminar o dejar comentado.
+  # rating_cuts: [0, 0.244, 0.314, 0.392, 0.427, 0.466, 0.506, 0.545, 0.585, 0.637, 1]
+  # rating_labels: [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+
+
+preprocessing:
+  # false → el Pipeline sklearn ya incluye StandardScaler u otro preprocesador internamente
+  #         Esta es la opción recomendada. El Pipeline garantiza que el escalado va
+  #         siempre junto con el modelo en el mismo objeto serializado.
+  # true  → el handler aplica scaler_file ANTES de pasar los datos al modelo.
+  #         Solo necesario si tu modelo NO es un Pipeline y tienes el scaler separado.
+  normalize: false

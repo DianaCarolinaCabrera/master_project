@@ -1,0 +1,18 @@
+model:
+  name: "demo-clasificador"
+  framework: "pytorch"
+  version: "1.0"
+
+paths:
+  model_file: "model.pth"
+  scaler_file: "scaler.pkl"
+
+inference:
+  device: "cpu"
+
+preprocessing:
+  normalize: true
+
+postprocessing:
+  threshold: 0.5
+  return_proba: true

@@ -1,0 +1,179 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# deployment_request.yaml — Solicitud de recomendación de arquitectura ML
+#
+# Llena este archivo con las características de TU MODELO y los requerimientos
+# del negocio. El agente leerá este YAML y recomendará qué servicios AWS usar
+# para desplegarlo de forma óptima.
+#
+# No importa qué tipo de modelo tengas (sklearn, PyTorch, XGBoost, LightGBM...)
+# ni cuántas features — el agente recomienda basado en los requerimientos de
+# despliegue, no en los internos del modelo.
+#
+# Cómo usar:
+#   poetry run demo --yaml configs/deployment_request.yaml
+#   # o desde S3:
+#   poetry run demo --yaml s3://mi-bucket/configs/deployment_request.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ── DESCRIPCIÓN DEL MODELO ────────────────────────────────────────────────────
+modelo:
+  nombre: "mi-modelo-financiero"
+  descripcion: "Modelo de propensidad de adquisición de tarjeta de crédito"
+
+  # Framework con el que fue entrenado el modelo
+  framework: "sklearn"   # sklearn | pytorch | tensorflow | xgboost | lightgbm
+
+  # Tipo de modelo — describe el problema que resuelve
+  tipo: "clasificacion_binaria"
+  # Opciones:
+  #   clasificacion_binaria  → riesgo crédito, fraude (sí/no)
+  #   propensity_scoring     → propensidad a adquirir un producto (score 1-10)
+  #   regression             → predicción de monto, LTV, probabilidad continua
+  #   clustering             → segmentación de clientes
+  #   deteccion_fraude       → fraude transaccional en tiempo real
+  #   scoring_credito        → scoring crediticio con rating
+  #   churn                  → predicción de abandono
+  #   aml                    → lavado de activos / compliance
+
+  sector: "financiero"
+
+  # Número de features del modelo (el agente estima el volumen de datos por request)
+  # Si tienes 150 features × 8 bytes ≈ 1.2 KB por solicitud
+  num_features: 10
+
+
+# ── REQUERIMIENTOS DE DESPLIEGUE ──────────────────────────────────────────────
+despliegue:
+  # ¿En cuánto tiempo máximo debe responder el modelo? (milisegundos)
+  # Ejemplos:
+  #   Aprobación de crédito en app:    800     (menos de 1 segundo)
+  #   Score para campaña de marketing: 5000    (5 segundos ok)
+  #   Reproceso nocturno de cartera:   86400000 (24 horas = batch)
+  latencia_requerida_ms: 800
+
+  # ¿Con qué frecuencia se van a hacer predicciones?
+  frecuencia_inferencia: "baja"
+  # Opciones:
+  #   baja     → esporádica, solicitudes bajo demanda (< 1000 req/día)
+  #   media    → regular, varias veces por hora
+  #   alta     → frecuente, picos predecibles durante el día
+  #   continua → 24/7, flujo constante de eventos (transacciones en tiempo real)
+
+  # Presupuesto mensual disponible para infraestructura (USD)
+  presupuesto_mensual_usd: 50
+
+  # ¿Cuánto necesita escalar el sistema?
+  escalabilidad_requerida: "media"
+  # Opciones:
+  #   baja   → tráfico predecible y controlado, no se esperan picos
+  #   media  → picos ocasionales, auto-scaling deseable
+  #   alta   → picos imprevisibles o crecimiento acelerado esperado
+
+  # (Opcional) Volumen estimado de datos por request en KB
+  # Si no se especifica, se estima automáticamente desde num_features
+  # volumen_datos_kb: 5
+
+
+# ── CONTEXTO ORGANIZACIONAL ───────────────────────────────────────────────────
+organizacion:
+  # ¿Qué tanta experiencia tiene el equipo con infraestructura cloud?
+  experiencia_tecnica: "media"
+  # Opciones:
+  #   baja   → sin experiencia en cloud, primer despliegue
+  #   media  → experiencia básica en AWS, sin DevOps dedicado
+  #   alta   → equipo con IaC, CI/CD, experiencia en cloud-native
+
+  # Proveedor de nube principal de la organización
+  proveedor_cloud: "aws"    # aws | gcp | azure (gcp/azure en desarrollo)
+
+  # Servicios disponibles/autorizados en la organización.
+  # El agente solo recomendará arquitecturas que usen servicios de esta lista.
+  # DEJAR VACÍO [] para recibir recomendaciones de TODOS los servicios disponibles.
+  #
+  # Los nombres DEBEN coincidir exactamente con el catálogo (aws_service_catalog_complete.csv).
+  # Catálogo completo de 57 servicios disponibles:
+  #
+  # ── Compute / Serverless ──────────────────────────────────────────────────
+  #   "AWS Lambda"
+  #   "AWS Fargate"
+  #   "Amazon EC2"
+  #   "Amazon Lightsail"
+  #   "AWS App Runner"
+  # ── Containers ────────────────────────────────────────────────────────────
+  #   "Amazon ECS"
+  #   "Amazon EKS"
+  # ── API / Networking ──────────────────────────────────────────────────────
+  #   "Amazon API Gateway"
+  #   "Amazon CloudFront"
+  #   "Amazon Route 53"
+  #   "Amazon VPC"
+  #   "AWS WAF"
+  # ── Storage ───────────────────────────────────────────────────────────────
+  #   "Amazon S3"
+  #   "Amazon FSx"
+  #   "AWS Backup"
+  #   "AWS DataSync"
+  # ── Databases ─────────────────────────────────────────────────────────────
+  #   "Amazon DynamoDB"
+  #   "Amazon RDS"
+  #   "Amazon Aurora"  (si aplica)
+  #   "Amazon DocumentDB"
+  #   "Amazon Neptune"
+  #   "Amazon ElastiCache"
+  #   "Amazon Redshift"
+  # ── Data / Analytics / ML ─────────────────────────────────────────────────
+  #   "AWS Glue"
+  #   "AWS Glue DataBrew"
+  #   "Amazon Athena"
+  #   "Amazon EMR"
+  #   "Amazon Kinesis"
+  #   "Amazon MSK"
+  #   "Amazon QuickSight"
+  #   "Amazon OpenSearch Service"
+  #   "Amazon SageMaker AI"
+  #   "Amazon Bedrock"
+  # ── Integration / Messaging ───────────────────────────────────────────────
+  #   "Amazon EventBridge"
+  #   "AWS Step Functions"
+  # ── DevOps / IaC ──────────────────────────────────────────────────────────
+  #   "AWS CloudFormation"
+  #   "AWS CDK"
+  #   "AWS CodeBuild"
+  #   "AWS CodeDeploy"
+  #   "AWS CodePipeline"
+  #   "AWS Amplify"
+  # ── Observability ─────────────────────────────────────────────────────────
+  #   "Amazon CloudWatch"
+  #   "AWS CloudTrail"
+  #   "AWS Config"
+  #   "AWS Systems Manager (SSM)"
+  # ── Security / Identity ───────────────────────────────────────────────────
+  #   "AWS IAM"
+  #   "AWS KMS"
+  #   "AWS Key Management Service (KMS)"
+  #   "AWS Secrets Manager"
+  #   "Amazon GuardDuty"
+  #   "Amazon Macie"
+  #   "AWS Organizations"
+  # ── Integration / Other ───────────────────────────────────────────────────
+  #   "AWS DMS"
+  #   "AWS SDK / boto3"
+  #   "AWS AppSync"
+  #   "Amazon Pinpoint"
+  #   "Amazon SES"
+  #   "Amazon WorkSpaces"
+  #
+  servicios_disponibles:
+    - "AWS Lambda"
+    - "Amazon API Gateway"
+    - "Amazon S3"
+    - "AWS Glue"
+    - "Amazon ECS"
+    - "AWS Fargate"
+    - "Amazon CloudWatch"
+    # Descomenta los que SÍ tienes disponibles:
+    # - "Amazon Kinesis"
+    # - "Amazon SageMaker AI"
+    # - "Amazon DynamoDB"
+    # - "Amazon EventBridge"

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Arch Recommender — Referencia Técnica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0B0F1A;
+    --surface: #131929;
+    --card:    #1C2438;
+    --border:  #2A3450;
+    --primary: #FF9900;
+    --emerald: #10B981;
+    --amber:   #F59E0B;
+    --red:     #EF4444;
+    --blue:    #3B82F6;
+    --violet:  #A855F7;
+    --cyan:    #06B6D4;
+    --text:    #F1F5F9;
+    --muted:   #94A3B8;
+    --dim:     #475569;
+    --mono:    'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  /* LAYOUT */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
+    background: #090E1A;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 28px 0;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 0 24px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-logo .brand {
+    font-size: 1.0em; font-weight: 800;
+    background: linear-gradient(135deg,#FF9900,#FFD166);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sidebar-logo .sub { font-size: 0.68em; color: var(--muted); letter-spacing: 0.08em; margin-top: 2px; }
+  .nav-section { font-size: 0.65em; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); padding: 14px 24px 6px; }
+  .nav-item {
+    display: block; padding: 8px 24px; font-size: 0.85em; color: var(--muted);
+    text-decoration: none; border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--primary); border-left-color: var(--primary); background: rgba(255,153,0,0.06); }
+  .main { margin-left: 260px; padding: 40px 56px 80px; max-width: 1100px; }
+  /* HEADER */
+  .page-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px; margin-bottom: 44px;
+  }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 0.72em; font-weight: 700; letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .badge-tech { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+  .badge-warn { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-ok   { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+  h1 { font-size: 2.3em; font-weight: 800; line-height: 1.2; }
+  h1 span { background: linear-gradient(135deg,#FF9900,#06B6D4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .page-meta { font-size: 0.83em; color: var(--dim); margin-top: 10px; }
+  /* SECTIONS */
+  h2 { font-size: 1.3em; font-weight: 700; color: var(--text); margin: 48px 0 16px; display: flex; align-items: center; gap: 10px; }
+  h2::before { content:''; display:inline-block; width:3px; height:18px; background:linear-gradient(180deg,var(--primary),rgba(255,153,0,0.3)); border-radius:2px; flex-shrink:0; }
+  h3 { font-size: 1.05em; font-weight: 700; color: var(--muted); margin: 28px 0 10px; }
+  p { color: var(--muted); margin-bottom: 14px; }
+  /* CARDS */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 26px; margin: 12px 0;
+  }
+  .card-accent-orange { border-left: 3px solid var(--primary); border-radius: 0 12px 12px 0; }
+  .card-accent-blue   { border-left: 3px solid var(--blue); border-radius: 0 12px 12px 0; }
+  .card-accent-green  { border-left: 3px solid var(--emerald); border-radius: 0 12px 12px 0; }
+  .card-accent-red    { border-left: 3px solid var(--red); border-radius: 0 12px 12px 0; }
+  /* TABLES */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88em; }
+  th { background: var(--surface); color: var(--muted); font-weight: 600; font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.08em; padding: 10px 14px; text-align: left; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-name { color: var(--text); font-weight: 600; font-family: var(--mono); font-size: 0.88em; }
+  .td-score { font-weight: 700; font-family: var(--mono); }
+  .score-hi { color: var(--emerald); }
+  .score-md { color: var(--amber); }
+  .score-lo { color: var(--red); }
+  /* CODE */
+  pre, code {
+    font-family: var(--mono); font-size: 0.85em;
+    background: #0D1117; border: 1px solid #21262D;
+    border-radius: 8px; color: #E6EDF3;
+  }
+  pre { padding: 18px 22px; overflow-x: auto; line-height: 1.65; margin: 14px 0; }
+  code { padding: 2px 7px; }
+  .kw { color: #FF7B72; }
+  .ty { color: #79C0FF; }
+  .st { color: #A5D6FF; }
+  .cm { color: #8B949E; font-style: italic; }
+  .nm { color: #FFA657; }
+  .nu { color: #79C0FF; }
+  /* ARCH CHIPS */
+  .chip {
+    display: inline-block; padding: 3px 11px; border-radius: 20px;
+    font-size: 0.78em; font-weight: 600; margin: 2px 3px;
+  }
+  .arch-serverless { background:rgba(16,185,129,0.12); color:#10B981; border:1px solid rgba(16,185,129,0.3); }
+  .arch-batch      { background:rgba(59,130,246,0.12); color:#3B82F6; border:1px solid rgba(59,130,246,0.3); }
+  .arch-streaming  { background:rgba(168,85,247,0.12); color:#A855F7; border:1px solid rgba(168,85,247,0.3); }
+  .arch-containers { background:rgba(245,158,11,0.12); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); }
+  .arch-sagemaker  { background:rgba(6,182,212,0.12);  color:#06B6D4; border:1px solid rgba(6,182,212,0.3); }
+  /* WEIGHT BARS */
+  .weight-bar { display:flex; align-items:center; gap:12px; margin:7px 0; }
+  .weight-label { width:110px; font-size:0.82em; color:var(--muted); }
+  .weight-track { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .weight-fill  { height:100%; border-radius:3px; }
+  .weight-val   { width:38px; text-align:right; font-size:0.82em; font-weight:700; font-family:var(--mono); color:var(--text); }
+  /* DIVIDER */
+  .divider { height:1px; background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent); margin:36px 0; }
+  /* RESTRICTION */
+  .restriction { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:14px 18px; margin:8px 0; font-size:0.87em; color:var(--muted); }
+  .restriction b { color:var(--red); }
+  /* FORMULA */
+  .formula-box {
+    background: #0A0E1C; border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 22px;
+    font-family: var(--mono); font-size: 0.9em; color:#E6EDF3;
+    margin: 14px 0; text-align: center; line-height: 2.2;
+  }
+  .formula-box .fx { color: var(--primary); font-weight: 600; }
+  /* STEP */
+  .step { display:flex; gap:16px; margin:14px 0; }
+  .step-num { width:28px; height:28px; border-radius:50%; background:rgba(255,153,0,0.15); border:1px solid rgba(255,153,0,0.4); display:flex; align-items:center; justify-content:center; font-size:0.78em; font-weight:700; color:var(--primary); flex-shrink:0; margin-top:2px; }
+  .step-body { font-size:0.88em; color:var(--muted); }
+  .step-body b { color:var(--text); }
+  /* INFO BOX */
+  .info-box { background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.25); border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.87em; color:var(--muted); }
+  .info-box b { color:var(--blue); }
+  /* FILE TREE */
+  .file-tree { background:#0D1117; border:1px solid #21262D; border-radius:10px; padding:18px 22px; font-family:var(--mono); font-size:0.83em; line-height:1.9; color:#8B949E; }
+  .file-tree .dir { color:#79C0FF; }
+  .file-tree .file { color:#E6EDF3; }
+  .file-tree .desc { color:#6E7681; font-style:italic; }
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">🏗️ ML Arch Recommender</div>
+    <div class="sub">REFERENCIA TÉCNICA v1.0</div>
+  </div>
+  <div class="nav-section">Arquitectura del sistema</div>
+  <a class="nav-item active" href="#overview">Visión general</a>
+  <a class="nav-item" href="#stack">Stack tecnológico</a>
+  <a class="nav-item" href="#estructura">Estructura de archivos</a>
+  <div class="nav-section">Motor de puntuación</div>
+  <a class="nav-item" href="#caseinput">CaseInput — entrada</a>
+  <a class="nav-item" href="#weights">Pesos y criterios</a>
+  <a class="nav-item" href="#adaptive">Pesos adaptativos</a>
+  <a class="nav-item" href="#scoring">Matrices de puntuación</a>
+  <a class="nav-item" href="#constraints">Restricciones duras</a>
+  <a class="nav-item" href="#output">Resultado — salida</a>
+  <div class="nav-section">Arquitecturas</div>
+  <a class="nav-item" href="#serverless">⚡ Serverless</a>
+  <a class="nav-item" href="#batch">📦 Batch</a>
+  <a class="nav-item" href="#streaming">🌊 Streaming</a>
+  <a class="nav-item" href="#containers">🐳 Containers</a>
+  <a class="nav-item" href="#sagemaker">🧠 SageMaker</a>
+  <div class="nav-section">Interfaz</div>
+  <a class="nav-item" href="#ui">Streamlit UI</a>
+  <a class="nav-item" href="#yaml">YAML API</a>
+  <a class="nav-item" href="#deploy">Despliegue</a>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="page-header">
+    <div class="badge badge-tech">DOCUMENTACIÓN TÉCNICA</div>
+    <h1>ML Architecture Recommender<br><span>Referencia del motor de puntuación</span></h1>
+    <p class="page-meta">Versión 1.0 &nbsp;·&nbsp; Python 3.11 &nbsp;·&nbsp; Streamlit 1.57 &nbsp;·&nbsp; scikit-learn 1.4 &nbsp;·&nbsp; Universidad Central de Colombia</p>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <h2>Visión general del sistema</h2>
+    <p>El ML Arch Recommender es un sistema experto basado en reglas ponderadas que evalúa cinco patrones de despliegue de modelos Machine Learning en AWS y devuelve la arquitectura óptima junto con justificación, advertencias y guía de implementación lista para producción.</p>
+
+    <div class="card card-accent-orange">
+      <h3 style="margin-top:0">Flujo de datos</h3>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><b>Entrada</b> — El usuario proporciona 8 parámetros: descripción, tipo de modelo, latencia, frecuencia de inferencia, volumen de datos, presupuesto, escalabilidad y experiencia técnica.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><b>Scoring</b> — El motor evalúa los 5 patrones de despliegue contra cada criterio usando una base de conocimiento codificada con umbrales, scores 1–10 y flags de restricción dura.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><b>Ponderación adaptativa</b> — Los pesos base se ajustan según el perfil de entrada (presupuesto muy bajo, equipo sin experiencia) y se normalizan a suma = 1.0.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body"><b>Ranking</b> — Se calcula el score total ponderado para cada arquitectura y se ordena de mayor a menor. Las restricciones duras fuerzan el score a 1/10.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body"><b>Salida</b> — Se devuelve un <code>RecommendationResult</code> con ganador, ranking completo, justificación narrativa, confianza y advertencias detectadas.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK -->
+  <section id="stack">
+    <h2>Stack tecnológico</h2>
+    <table>
+      <tr><th>Capa</th><th>Tecnología</th><th>Versión mínima</th><th>Rol</th></tr>
+      <tr><td class="td-name">Interfaz web</td><td>Streamlit</td><td>≥ 1.35</td><td>UI reactiva, gestión de estado, despliegue en Streamlit Cloud</td></tr>
+      <tr><td class="td-name">Motor de IA</td><td>Python puro (dataclasses)</td><td>3.11</td><td>Sistema experto, scoring, detección de restricciones</td></tr>
+      <tr><td class="td-name">Serialización</td><td>PyYAML</td><td>≥ 6.0</td><td>Carga de configuración desde archivo .yaml</td></tr>
+      <tr><td class="td-name">Modelos ML</td><td>scikit-learn + joblib</td><td>≥ 1.4</td><td>Serialización de modelos en las guías de implementación</td></tr>
+      <tr><td class="td-name">SDK AWS</td><td>boto3</td><td>≥ 1.34</td><td>Snippets de código en guías; sin llamadas en tiempo de ejecución</td></tr>
+      <tr><td class="td-name">Utilidades</td><td>Rich</td><td>≥ 13.7</td><td>Salida coloreada en el modo CLI (<code>demo</code>)</td></tr>
+      <tr><td class="td-name">Gestión de deps</td><td>Poetry + pyproject.toml</td><td>≥ 2.0</td><td>Entorno reproducible, scripts CLI registrados</td></tr>
+      <tr><td class="td-name">Calidad</td><td>black · ruff · mypy · pytest</td><td>—</td><td>Formateo, linting, tipado estático y pruebas unitarias</td></tr>
+    </table>
+  </section>
+
+  <!-- ESTRUCTURA -->
+  <section id="estructura">
+    <h2>Estructura de archivos</h2>
+    <div class="file-tree">
+<span class="dir">project_root/</span>
+├── <span class="file">app.py</span>                    <span class="desc">— UI Streamlit (1 700+ líneas)</span>
+├── <span class="file">requirements.txt</span>           <span class="desc">— deps para Streamlit Cloud</span>
+├── <span class="file">pyproject.toml</span>             <span class="desc">— configuración Poetry + scripts</span>
+├── <span class="dir">.streamlit/</span>
+│   └── <span class="file">config.toml</span>            <span class="desc">— tema AWS dark + headless</span>
+├── <span class="dir">assets/</span>
+│   └── <span class="file">logosimbolo_ucentral_4.png</span>  <span class="desc">— 737×248 RGBA, 150 DPI</span>
+├── <span class="dir">configs/</span>
+│   └── <span class="file">deployment_request_template.yaml</span>  <span class="desc">— plantilla de parámetros</span>
+├── <span class="dir">src/ml_arch_recommender/</span>
+│   ├── <span class="file">__init__.py</span>
+│   ├── <span class="file">demo.py</span>                <span class="desc">— CASOS presets + IMPL_GUIDES</span>
+│   └── <span class="dir">scoring/</span>
+│       ├── <span class="file">__init__.py</span>
+│       └── <span class="file">engine.py</span>          <span class="desc">— motor completo (~1 100 líneas)</span>
+├── <span class="dir">tests/</span>                         <span class="desc">— suite pytest</span>
+└── <span class="dir">docs/</span>                          <span class="desc">— documentación (este archivo)</span>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- CASEINPUT -->
+  <section id="caseinput">
+    <h2>CaseInput — estructura de entrada</h2>
+    <p>Todos los parámetros de entrada se encapsulan en un <code>dataclass</code> inmutable. El motor nunca modifica el objeto recibido.</p>
+    <pre><span class="kw">@dataclass</span>
+<span class="kw">class</span> <span class="ty">CaseInput</span>:
+    descripcion:            <span class="ty">str</span>              <span class="cm"># texto libre descriptivo del caso</span>
+    tipo_modelo:            <span class="ty">str</span>              <span class="cm"># "clasificacion_binaria" | "propensity_scoring" | ...</span>
+    latencia_requerida_ms:  <span class="ty">float</span>            <span class="cm"># p.ej. 200 (fraude) · 800 (app) · 86_400_000 (batch)</span>
+    frecuencia_inferencia:  <span class="ty">FrequencyLevel</span>   <span class="cm"># "baja" | "media" | "alta" | "continua"</span>
+    volumen_datos_kb:       <span class="ty">float</span>            <span class="cm"># KB por solicitud = num_features × 8 / 1024</span>
+    presupuesto_mensual_usd:<span class="ty">float</span>            <span class="cm"># USD/mes máximo de infraestructura AWS</span>
+    escalabilidad_requerida:<span class="ty">ScaleLevel</span>       <span class="cm"># "baja" | "media" | "alta"</span>
+    experiencia_tecnica:    <span class="ty">ExperienceLevel</span>  <span class="cm"># "baja" | "media" | "alta"</span>
+    disponibilidad_requerida: <span class="ty">str</span> = <span class="st">"alta"</span>   <span class="cm"># reservado para versiones futuras</span>
+    servicios_disponibles: <span class="ty">list</span>[<span class="ty">str</span>] = <span class="nm">field</span>(default_factory=<span class="ty">list</span>)</pre>
+
+    <table>
+      <tr><th>Parámetro</th><th>Tipo</th><th>Valores válidos</th><th>Impacto en scoring</th></tr>
+      <tr><td class="td-name">latencia_requerida_ms</td><td><code>float</code></td><td>50 – 86 400 000</td><td>Umbral duro: &lt; 1 000 ms activa HARD CONSTRAINT en Batch</td></tr>
+      <tr><td class="td-name">frecuencia_inferencia</td><td><code>Literal</code></td><td>baja / media / alta / continua</td><td>Define si Streaming tiene ventaja (alta/continua) o desventaja (baja)</td></tr>
+      <tr><td class="td-name">presupuesto_mensual_usd</td><td><code>float</code></td><td>5 – 10 000</td><td>≤ $50 activa peso adaptativo + HARD CONSTRAINT en Streaming/ECS/SageMaker</td></tr>
+      <tr><td class="td-name">escalabilidad_requerida</td><td><code>Literal</code></td><td>baja / media / alta</td><td>"alta" favorece Streaming y Containers; "baja" favorece Serverless</td></tr>
+      <tr><td class="td-name">experiencia_tecnica</td><td><code>Literal</code></td><td>baja / media / alta</td><td>"baja" penaliza Containers (score 2/10) y Streaming (score 3/10)</td></tr>
+      <tr><td class="td-name">volumen_datos_kb</td><td><code>float</code></td><td>0.001 – ∞</td><td>Usado para advertencia de payload pequeño con frecuencia continua</td></tr>
+    </table>
+  </section>
+
+  <!-- WEIGHTS -->
+  <section id="weights">
+    <h2>Pesos base de los criterios</h2>
+    <p>El score total de cada arquitectura es la suma ponderada de sus scores individuales en los 5 criterios. La fórmula base es:</p>
+    <div class="formula-box">
+      <span class="fx">score_total</span> = Σ ( <span class="fx">w<sub>i</sub></span> × <span class="fx">score<sub>i</sub></span> )
+      &nbsp;&nbsp;con&nbsp;&nbsp;
+      Σ <span class="fx">w<sub>i</sub></span> = 1.0
+      &nbsp;&nbsp;y&nbsp;&nbsp;
+      <span class="fx">score<sub>i</sub></span> ∈ [1, 10]
+    </div>
+
+    <div class="card">
+      <div class="weight-bar">
+        <div class="weight-label">Latencia</div>
+        <div class="weight-track"><div class="weight-fill" style="width:25%;background:linear-gradient(90deg,#FF9900,#FFD166)"></div></div>
+        <div class="weight-val">25 %</div>
+      </div>
+      <div class="weight-bar">
+        <div class="weight-label">Frecuencia</div>
+        <div class="weight-track"><div class="weight-fill" style="width:25%;background:linear-gradient(90deg,#06B6D4,#38BDF8)"></div></div>
+        <div class="weight-val">25 %</div>
+      </div>
+      <div class="weight-bar">
+        <div class="weight-label">Presupuesto</div>
+        <div class="weight-track"><div class="weight-fill" style="width:20%;background:linear-gradient(90deg,#10B981,#34D399)"></div></div>
+        <div class="weight-val">20 %</div>
+      </div>
+      <div class="weight-bar">
+        <div class="weight-label">Escalabilidad</div>
+        <div class="weight-track"><div class="weight-fill" style="width:15%;background:linear-gradient(90deg,#A855F7,#C084FC)"></div></div>
+        <div class="weight-val">15 %</div>
+      </div>
+      <div class="weight-bar">
+        <div class="weight-label">Experiencia</div>
+        <div class="weight-track"><div class="weight-fill" style="width:15%;background:linear-gradient(90deg,#F59E0B,#FCD34D)"></div></div>
+        <div class="weight-val">15 %</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADAPTIVE -->
+  <section id="adaptive">
+    <h2>Pesos adaptativos</h2>
+    <p>El motor detecta dos perfiles especiales y redistribuye los pesos antes de calcular el ranking. Los nuevos pesos siempre se normalizan a 1.0.</p>
+    <table>
+      <tr><th>Condición detectada</th><th>Ajuste</th><th>Razón</th></tr>
+      <tr>
+        <td><code>presupuesto ≤ $50</code></td>
+        <td>presupuesto → 0.35 &nbsp;|&nbsp; latencia → 0.20 &nbsp;|&nbsp; frecuencia → 0.20<br>escalabilidad → 0.10</td>
+        <td>Para startups/MVP el costo es el factor más crítico; latencia y escala son secundarias</td>
+      </tr>
+      <tr>
+        <td><code>experiencia = "baja"</code></td>
+        <td>experiencia +0.10 &nbsp;|&nbsp; latencia −0.05 (mín 0.10) &nbsp;|&nbsp; escalabilidad −0.05 (mín 0.05)</td>
+        <td>Un equipo sin experiencia técnica elige por facilidad de implementación primero</td>
+      </tr>
+    </table>
+    <div class="info-box">
+      <b>Nota:</b> Ambos ajustes son acumulativos. Si <code>presupuesto ≤ $50</code> Y <code>experiencia = "baja"</code> se aplican en secuencia y luego se normaliza. Los pesos finales pueden diferir significativamente de los base.
+    </div>
+  </section>
+
+  <!-- SCORING -->
+  <section id="scoring">
+    <h2>Matrices de puntuación por criterio</h2>
+    <p>Cada función <code>_kb_*</code> en <code>engine.py</code> implementa la base de conocimiento de un criterio. Retorna un <code>KBResult(score, justificacion, es_restriccion)</code>. Las restricciones fuerzan el score a 1 independientemente del peso.</p>
+
+    <h3>Latencia — umbral crítico: ≤ 1 000 ms</h3>
+    <table>
+      <tr><th>Arquitectura</th><th>≤ 1 000 ms</th><th>&gt; 1 000 ms</th><th>Restricción</th></tr>
+      <tr><td><span class="chip arch-serverless">⚡ Serverless</span></td><td class="td-score score-hi">9</td><td class="td-score score-md">4</td><td>—</td></tr>
+      <tr><td><span class="chip arch-batch">📦 Batch</span></td><td class="td-score score-lo">1</td><td class="td-score score-hi">9</td><td>✗ HARD (latencia ≤ 1 s)</td></tr>
+      <tr><td><span class="chip arch-streaming">🌊 Streaming</span></td><td class="td-score score-hi">8</td><td class="td-score score-md">6</td><td>—</td></tr>
+      <tr><td><span class="chip arch-containers">🐳 Containers</span></td><td class="td-score score-md">7</td><td class="td-score score-md">7</td><td>—</td></tr>
+      <tr><td><span class="chip arch-sagemaker">🧠 SageMaker</span></td><td class="td-score score-hi">8</td><td class="td-score score-md">7</td><td>—</td></tr>
+    </table>
+
+    <h3>Frecuencia de inferencia</h3>
+    <table>
+      <tr><th>Arquitectura</th><th>baja</th><th>media</th><th>alta</th><th>continua</th></tr>
+      <tr><td><span class="chip arch-serverless">⚡ Serverless</span></td><td class="td-score score-hi">10</td><td class="td-score score-hi">8</td><td class="td-score score-md">5</td><td class="td-score score-lo">3</td></tr>
+      <tr><td><span class="chip arch-batch">📦 Batch</span></td><td class="td-score score-hi">8</td><td class="td-score score-md">5</td><td class="td-score score-lo">2 ✗</td><td class="td-score score-lo">1 ✗</td></tr>
+      <tr><td><span class="chip arch-streaming">🌊 Streaming</span></td><td class="td-score score-lo">2 ✗</td><td class="td-score score-md">7</td><td class="td-score score-hi">10</td><td class="td-score score-hi">10</td></tr>
+      <tr><td><span class="chip arch-containers">🐳 Containers</span></td><td class="td-score score-md">4</td><td class="td-score score-hi">8</td><td class="td-score score-hi">9</td><td class="td-score score-hi">9</td></tr>
+      <tr><td><span class="chip arch-sagemaker">🧠 SageMaker</span></td><td class="td-score score-md">5</td><td class="td-score score-hi">8</td><td class="td-score score-hi">9</td><td class="td-score score-hi">8</td></tr>
+    </table>
+
+    <h3>Presupuesto mensual</h3>
+    <p style="font-size:0.85em">Costos mínimos referenciales (us-east-1): Serverless $0 · Batch $0.50 · Streaming $11 · Containers $15 · SageMaker $38</p>
+    <table>
+      <tr><th>Arquitectura</th><th>≤ $50 (startup)</th><th>$51–$200 (pyme)</th><th>&gt; $200 (corporativo)</th></tr>
+      <tr><td><span class="chip arch-serverless">⚡ Serverless</span></td><td class="td-score score-hi">10</td><td class="td-score score-hi">10</td><td class="td-score score-hi">8</td></tr>
+      <tr><td><span class="chip arch-batch">📦 Batch</span></td><td class="td-score score-hi">9</td><td class="td-score score-hi">8</td><td class="td-score score-md">7</td></tr>
+      <tr><td><span class="chip arch-streaming">🌊 Streaming</span></td><td class="td-score score-lo">2 ✗</td><td class="td-score score-md">5</td><td class="td-score score-md">7</td></tr>
+      <tr><td><span class="chip arch-containers">🐳 Containers</span></td><td class="td-score score-lo">2 ✗</td><td class="td-score score-md">4</td><td class="td-score score-md">7</td></tr>
+      <tr><td><span class="chip arch-sagemaker">🧠 SageMaker</span></td><td class="td-score score-lo">1 ✗</td><td class="td-score score-lo">2 ✗</td><td class="td-score score-md">6</td></tr>
+    </table>
+    <p style="font-size:0.83em;margin-top:6px">✗ = <b>restricción activa</b> — el costo mínimo del servicio supera el presupuesto disponible.</p>
+
+    <h3>Escalabilidad requerida</h3>
+    <table>
+      <tr><th>Arquitectura</th><th>baja</th><th>media</th><th>alta</th></tr>
+      <tr><td><span class="chip arch-serverless">⚡ Serverless</span></td><td class="td-score score-hi">9</td><td class="td-score score-hi">9</td><td class="td-score score-md">7</td></tr>
+      <tr><td><span class="chip arch-batch">📦 Batch</span></td><td class="td-score score-hi">8</td><td class="td-score score-md">6</td><td class="td-score score-md">4</td></tr>
+      <tr><td><span class="chip arch-streaming">🌊 Streaming</span></td><td class="td-score score-md">5</td><td class="td-score score-hi">8</td><td class="td-score score-hi">9</td></tr>
+      <tr><td><span class="chip arch-containers">🐳 Containers</span></td><td class="td-score score-md">6</td><td class="td-score score-hi">8</td><td class="td-score score-hi">9</td></tr>
+      <tr><td><span class="chip arch-sagemaker">🧠 SageMaker</span></td><td class="td-score score-md">6</td><td class="td-score score-hi">8</td><td class="td-score score-hi">9</td></tr>
+    </table>
+
+    <h3>Experiencia técnica del equipo</h3>
+    <table>
+      <tr><th>Arquitectura</th><th>baja</th><th>media</th><th>alta</th></tr>
+      <tr><td><span class="chip arch-serverless">⚡ Serverless</span></td><td class="td-score score-md">7</td><td class="td-score score-hi">9</td><td class="td-score score-hi">8</td></tr>
+      <tr><td><span class="chip arch-batch">📦 Batch</span></td><td class="td-score score-md">5</td><td class="td-score score-md">7</td><td class="td-score score-hi">8</td></tr>
+      <tr><td><span class="chip arch-streaming">🌊 Streaming</span></td><td class="td-score score-lo">3</td><td class="td-score score-md">6</td><td class="td-score score-hi">9</td></tr>
+      <tr><td><span class="chip arch-containers">🐳 Containers</span></td><td class="td-score score-lo">2</td><td class="td-score score-md">6</td><td class="td-score score-hi">9</td></tr>
+      <tr><td><span class="chip arch-sagemaker">🧠 SageMaker</span></td><td class="td-score score-md">6</td><td class="td-score score-md">7</td><td class="td-score score-hi">9</td></tr>
+    </table>
+  </section>
+
+  <!-- CONSTRAINTS -->
+  <section id="constraints">
+    <h2>Restricciones duras y advertencias</h2>
+    <p>El motor detecta situaciones de incompatibilidad mediante la función <code>_detect_advertencias()</code>. Las <b>restricciones duras</b> son incompatibilidades físicas; las <b>tensiones</b> son señales de alerta no bloqueantes.</p>
+
+    <div class="restriction">
+      <b>✗ HARD — Batch + tiempo real:</b> Si <code>latencia ≤ 1 000 ms</code>, Batch Processing recibe score forzado a 1/10. &ldquo;Batch es inherentemente asíncrono (minutos a horas). Incompatible con SLA de tiempo real.&rdquo;
+    </div>
+    <div class="restriction">
+      <b>✗ HARD — Streaming + frecuencia baja:</b> Si <code>frecuencia = "baja"</code>, Streaming recibe score 2/10 con flag de restricción. &ldquo;Montar infraestructura Kinesis es costoso e innecesario para tráfico esporádico.&rdquo;
+    </div>
+    <div class="restriction">
+      <b>✗ HARD — Presupuesto insuficiente:</b> Si el costo mínimo de la arquitectura supera el presupuesto disponible, se activa restricción presupuestal. SageMaker ($38/mes) queda bloqueado con presupuesto ≤ $200; Streaming ($11) y Containers ($15) con ≤ $50.
+    </div>
+    <div class="card card-accent-blue" style="margin-top:20px">
+      <h3 style="margin-top:0">Advertencias no bloqueantes (tensiones)</h3>
+      <table>
+        <tr><th>Condición</th><th>Tipo</th><th>Impacto</th></tr>
+        <tr><td><code>frecuencia = "continua"</code> Y <code>presupuesto &lt; $50</code></td><td>tensión</td><td>Aviso de costo elevado de Kinesis</td></tr>
+        <tr><td><code>escalabilidad = "alta"</code> Y <code>presupuesto &lt; $50</code></td><td>tensión</td><td>Costo fijo alto de ECS/SageMaker</td></tr>
+        <tr><td><code>experiencia = "baja"</code> Y top arch = Streaming/Containers</td><td>coherencia</td><td>Aviso de curva de aprendizaje alta</td></tr>
+        <tr><td><code>volumen_kb &lt; 1</code> Y <code>frecuencia in (alta, continua)</code></td><td>coherencia</td><td>Overhead Kinesis mayor que payload</td></tr>
+        <tr><td><code>presupuesto ≤ $50</code></td><td>perfil MVP</td><td>Priorización automática de costos</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- OUTPUT -->
+  <section id="output">
+    <h2>Estructura de salida — RecommendationResult</h2>
+    <pre><span class="kw">@dataclass</span>
+<span class="kw">class</span> <span class="ty">RecommendationResult</span>:
+    recomendacion:    <span class="ty">ArchitectureScore</span>       <span class="cm"># arquitectura ganadora</span>
+    ranking:          <span class="ty">list</span>[<span class="ty">ArchitectureScore</span>]  <span class="cm"># las 5, ordenadas por score</span>
+    justificacion:    <span class="ty">str</span>                    <span class="cm"># texto narrativo del por qué</span>
+    criterio_decisivo:<span class="ty">str</span>                    <span class="cm"># criterio con mayor diferencial</span>
+    confianza:        <span class="ty">float</span>                  <span class="cm"># diferencia score_1 - score_2 normalizada [0,1]</span>
+    advertencias:     <span class="ty">list</span>[<span class="ty">Advertencia</span>]      <span class="cm"># restricciones y tensiones detectadas</span>
+    input_recibido:   <span class="ty">CaseInput</span>              <span class="cm"># copia del input original</span>
+
+<span class="kw">@dataclass</span>
+<span class="kw">class</span> <span class="ty">ArchitectureScore</span>:
+    id:            <span class="ty">str</span>           <span class="cm"># "serverless" | "batch" | "streaming" | "containers" | "sagemaker"</span>
+    nombre:        <span class="ty">str</span>           <span class="cm"># nombre legible</span>
+    score_total:   <span class="ty">float</span>         <span class="cm"># score ponderado final [1, 10]</span>
+    desglose:      <span class="ty">dict</span>[<span class="ty">str</span>,<span class="ty">float</span>]  <span class="cm"># score por criterio</span>
+    posicion:      <span class="ty">int</span>           <span class="cm"># posición en el ranking (1 = mejor)</span>
+    descartada_por:<span class="ty">str</span> | <span class="ty">None</span>    <span class="cm"># razón si tiene restricción activa</span>
+    servicios_aws: <span class="ty">list</span>[<span class="ty">str</span>]    <span class="cm"># servicios requeridos para esta arquitectura</span></pre>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ARCH PROFILES -->
+  <section id="serverless">
+    <h2>⚡ Serverless (Lambda + API Gateway)</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="badge badge-ok">Costo: $0–$1/mes</span>
+      <span class="badge badge-tech">Latencia: 50–200 ms warm</span>
+      <span class="badge badge-warn">Cold start: mitigable</span>
+    </div>
+    <p>Patrón ideal para predicciones bajo demanda y baja/media frecuencia. El modelo se carga desde S3 al arrancar el contenedor Lambda y permanece en memoria mientras hay tráfico. El primer request tiene cold start (~500 ms); los siguientes son warm (~50–200 ms). Provisioned Concurrency elimina el cold start a costo fijo.</p>
+    <p><b>Servicios principales:</b> AWS Lambda · Amazon API Gateway · Amazon S3<br>
+    <b>Cuándo no usar:</b> frecuencia continua (timeout 15 min), volumen muy alto (Provisioned Concurrency costoso), o cuando se necesita GPU.</p>
+  </section>
+
+  <section id="batch">
+    <h2>📦 Batch Processing (S3 + Glue)</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="badge badge-ok">Costo: $0.50–$50/mes</span>
+      <span class="badge badge-tech">Latencia: horas/días</span>
+      <span class="badge badge-warn">Requiere PySpark básico</span>
+    </div>
+    <p>Diseñado para scoring masivo diferido: campañas de marketing, rescoring nocturno de carteras, generación de listas de propensión. Un job Glue procesa millones de registros de S3 y escribe los resultados de vuelta a S3 o a una base de datos. EventBridge o Step Functions actúan como orquestador.</p>
+    <p><b>Servicios principales:</b> AWS Glue · Amazon S3 · Amazon EventBridge · AWS Step Functions<br>
+    <b>Cuándo no usar:</b> si se necesita respuesta en tiempo real (&lt; 1 s). Esta es una restricción dura del motor.</p>
+  </section>
+
+  <section id="streaming">
+    <h2>🌊 Streaming (Kinesis + Lambda)</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="badge badge-ok">Costo: $11–$100/mes</span>
+      <span class="badge badge-tech">Latencia: ~200 ms</span>
+      <span class="badge badge-warn">Alta experiencia requerida</span>
+    </div>
+    <p>Arquitectura para procesamiento de eventos en tiempo real: cada transacción/evento llega a Kinesis Data Streams, dispara una Lambda que carga el modelo y genera la predicción, y almacena el resultado en DynamoDB para consulta inmediata. Escala horizontalmente via shards.</p>
+    <p><b>Servicios principales:</b> Amazon Kinesis · AWS Lambda · Amazon DynamoDB · Amazon CloudWatch<br>
+    <b>Cuándo no usar:</b> frecuencia baja (costo de Kinesis no se amortiza), presupuesto &lt; $11/mes, equipo sin experiencia en arquitecturas event-driven.</p>
+  </section>
+
+  <section id="containers">
+    <h2>🐳 Containers (ECS Fargate + ALB)</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="badge badge-ok">Costo: $15–$150/mes</span>
+      <span class="badge badge-tech">Latencia: 50–300 ms</span>
+      <span class="badge badge-warn">Requiere Docker + DevOps</span>
+    </div>
+    <p>API REST persistente sobre FastAPI o Flask containerizada en Docker, desplegada en ECS Fargate con ALB para balanceo. El modelo permanece en memoria sin re-cargas. Máximo control sobre el entorno de ejecución. Soporta blue/green deploys, rollback inmediato y auto-scaling por CPU/latencia.</p>
+    <p><b>Servicios principales:</b> Amazon ECS · AWS Fargate · AWS App Runner · Amazon CloudWatch<br>
+    <b>Cuándo no usar:</b> equipos sin experiencia en Docker/ECS, presupuesto &lt; $15/mes (costo mínimo de Fargate).</p>
+  </section>
+
+  <section id="sagemaker">
+    <h2>🧠 SageMaker Managed Endpoint</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="badge badge-ok">Costo: $38–$500/mes</span>
+      <span class="badge badge-tech">Latencia: 30–150 ms warm</span>
+      <span class="badge badge-warn">Requiere MLOps maduro</span>
+    </div>
+    <p>Plataforma MLOps completa: el modelo se registra en el Model Registry, se despliega en un endpoint gestionado con auto-scaling nativo, monitoreo de data drift y model quality integrado, y A/B testing entre variantes sin downtime. Ideal cuando el ciclo de vida del modelo requiere re-entrenamiento frecuente y trazabilidad.</p>
+    <p><b>Servicios principales:</b> Amazon SageMaker AI · Amazon S3 · Amazon CloudWatch<br>
+    <b>Cuándo no usar:</b> presupuesto &lt; $200/mes (ml.t3.medium ~$38/mes sin tráfico), proyectos simples donde el overhead operativo no se justifica.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- UI -->
+  <section id="ui">
+    <h2>Interfaz Streamlit — arquitectura del frontend</h2>
+    <p>La UI es un único archivo <code>app.py</code> (~1 700 líneas) organizado en secciones funcionales:</p>
+    <table>
+      <tr><th>Función</th><th>Responsabilidad</th></tr>
+      <tr><td class="td-name">_render_sidebar()</td><td>Logo, presets, carga YAML, formulario de parámetros (session state keys <code>f_*</code>), botón CTA</td></tr>
+      <tr><td class="td-name">_render_landing()</td><td>Página de bienvenida con feature cards y referencia de arquitecturas</td></tr>
+      <tr><td class="td-name">_render_tab_recommendation()</td><td>Winner card interactivo con master-detail; ranking clickable; advertencias</td></tr>
+      <tr><td class="td-name">_render_tab_services()</td><td>Análisis de viabilidad, glosario de servicios, sustituciones, alternativa económica</td></tr>
+      <tr><td class="td-name">_render_tab_guide()</td><td>Guía de implementación: estructura, código, deploy, env vars, IAM, buena práctica</td></tr>
+      <tr><td class="td-name">_score_ring_svg()</td><td>SVG inline de anillo de score animado con stroke-dasharray</td></tr>
+      <tr><td class="td-name">_criterion_bar()</td><td>HTML string para barra de criterio con animación CSS barScale</td></tr>
+      <tr><td class="td-name">_parse_yaml_upload()</td><td>Parsea bytes de YAML y escribe en <code>st.session_state.f_*</code></td></tr>
+      <tr><td class="td-name">_apply_preset_to_state()</td><td>Copia CaseInput preset a session state sin recargar la página</td></tr>
+    </table>
+    <p>Todo el HTML dinámico se genera como concatenaciones de f-strings sin comentarios HTML para evitar el bug de parsing de <code>st.markdown(unsafe_allow_html=True)</code> con bloques <code>&lt;!-- --&gt;</code>.</p>
+  </section>
+
+  <!-- YAML -->
+  <section id="yaml">
+    <h2>YAML API — formato de configuración</h2>
+    <p>El sistema acepta configuración en formato YAML con tres secciones. El campo <code>volumen_datos_kb</code> es opcional y se calcula como <code>num_features × 8 / 1024</code> si se omite.</p>
+    <pre><span class="nm">modelo</span>:
+  <span class="nm">nombre</span>:             <span class="st">"mi-modelo-ml"</span>
+  <span class="nm">descripcion</span>:        <span class="st">"Texto descriptivo del caso de uso"</span>
+  <span class="nm">framework</span>:          <span class="st">"sklearn"</span>           <span class="cm"># sklearn|pytorch|tensorflow|xgboost|lightgbm|catboost|huggingface</span>
+  <span class="nm">tipo</span>:               <span class="st">"clasificacion_binaria"</span>  <span class="cm"># ver lista completa abajo</span>
+  <span class="nm">sector</span>:             <span class="st">"financiero"</span>        <span class="cm"># opcional</span>
+  <span class="nm">num_features</span>:       <span class="nu">10</span>
+
+<span class="nm">despliegue</span>:
+  <span class="nm">latencia_requerida_ms</span>:   <span class="nu">800</span>
+  <span class="nm">frecuencia_inferencia</span>:   <span class="st">"baja"</span>      <span class="cm"># baja|media|alta|continua</span>
+  <span class="nm">presupuesto_mensual_usd</span>: <span class="nu">50</span>
+  <span class="nm">escalabilidad_requerida</span>: <span class="st">"media"</span>     <span class="cm"># baja|media|alta</span>
+  <span class="nm">volumen_datos_kb</span>:        <span class="cm"># opcional</span>
+
+<span class="nm">organizacion</span>:
+  <span class="nm">experiencia_tecnica</span>: <span class="st">"media"</span>         <span class="cm"># baja|media|alta</span>
+  <span class="nm">proveedor_cloud</span>:     <span class="st">"aws"</span>           <span class="cm"># solo aws soportado actualmente</span></pre>
+
+    <p>Tipos de modelo válidos: <code>clasificacion_binaria</code> · <code>propensity_scoring</code> · <code>regression</code> · <code>clustering</code> · <code>deteccion_fraude</code> · <code>scoring_credito</code> · <code>churn</code> · <code>aml</code></p>
+  </section>
+
+  <!-- DEPLOY -->
+  <section id="deploy">
+    <h2>Despliegue</h2>
+    <h3>Local</h3>
+    <pre><span class="kw">git</span> clone &lt;repo&gt; &amp;&amp; <span class="kw">cd</span> project_root
+<span class="kw">poetry</span> install
+<span class="kw">poetry</span> run streamlit run app.py</pre>
+
+    <h3>Streamlit Community Cloud (HTTPS gratuito)</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">Push al repositorio GitHub (rama <code>main</code>)</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">share.streamlit.io → <b>Create app</b> → seleccionar repo → Main file: <code>app.py</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">Deploy → URL HTTPS automática en ~2 minutos. Actualizaciones por <code>git push</code>.</div>
+    </div>
+    <div class="info-box" style="margin-top:16px">
+      <b>Variables de entorno:</b> Si el motor hace llamadas reales a AWS, configurar <code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code> y <code>AWS_DEFAULT_REGION</code> en App → Settings → Secrets (formato TOML). La versión actual no requiere credenciales AWS en tiempo de ejecución.
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-item');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) current = s.id; });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>
