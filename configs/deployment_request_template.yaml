@@ -1,0 +1,109 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# deployment_request_template.yaml
+# Plantilla para el Agente Recomendador de Arquitecturas ML en AWS
+#
+# USO:
+#   • Web: cargar este archivo en la app (sidebar → "Cargar YAML")
+#   • CLI: poetry run demo --yaml configs/deployment_request_template.yaml
+#
+# INSTRUCCIONES:
+#   Completa los campos indicados con →  y elimina los comentarios que no apliquen.
+#   Los campos opcionales están marcados con  (opcional).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ── 1. DESCRIPCIÓN DEL MODELO ─────────────────────────────────────────────────
+modelo:
+
+  nombre: "mi-modelo-ml"
+  # → Nombre identificador del modelo (ej: "credit-risk-v2", "fraud-detector")
+
+  descripcion: "Modelo de clasificación de riesgo crediticio"
+  # → Descripción breve del problema que resuelve el modelo
+
+  framework: "sklearn"
+  # → Framework con el que fue entrenado
+  # Opciones:
+  #   sklearn       → scikit-learn (clasificadores, regressores, pipelines)
+  #   pytorch       → redes neuronales, transformers
+  #   tensorflow    → Keras / TF SavedModel
+  #   xgboost       → XGBoost (gradient boosting tabular)
+  #   lightgbm      → LightGBM (gradient boosting, más rápido)
+  #   catboost      → CatBoost (categóricas nativas)
+  #   huggingface   → modelos de texto / NLP
+
+  tipo: "clasificacion_binaria"
+  # → Tipo de problema que resuelve el modelo
+  # Opciones:
+  #   clasificacion_binaria → riesgo crédito, fraude (sí/no), churn
+  #   propensity_scoring    → propensidad a adquirir un producto (score 0–1)
+  #   regression            → predicción de monto, LTV, probabilidad continua
+  #   clustering            → segmentación de clientes sin etiqueta
+  #   deteccion_fraude      → fraude transaccional en tiempo real (<200ms)
+  #   scoring_credito       → scoring crediticio con deciles / rating
+  #   churn                 → predicción de abandono de clientes
+  #   aml                   → lavado de activos / compliance / alertas
+
+  sector: "financiero"
+  # (opcional) Sector de la organización
+  # Opciones: financiero | retail | salud | telecomunicaciones | logistica | otro
+
+  num_features: 10
+  # → Número de features del modelo
+  # El agente estima el volumen de datos por request:
+  #   10 features  × 8 bytes ≈ 0.08 KB por solicitud
+  #   150 features × 8 bytes ≈ 1.2  KB por solicitud
+
+
+# ── 2. REQUERIMIENTOS DE DESPLIEGUE ───────────────────────────────────────────
+despliegue:
+
+  latencia_requerida_ms: 800
+  # → Tiempo máximo de respuesta aceptable (en milisegundos)
+  # Referencia rápida:
+  #    200       → Fraude en tiempo real (< 200 ms, estricto)
+  #    800       → Aprobación de crédito en app móvil (< 1 segundo)
+  #   5000       → Score para campaña de marketing (5 segundos ok)
+  #  60000       → Proceso interno con usuario esperando (1 minuto)
+  # 86400000     → Reproceso nocturno de cartera (24 horas = batch)
+
+  frecuencia_inferencia: "baja"
+  # → Frecuencia con la que se harán predicciones
+  # Opciones:
+  #   baja     → esporádica, bajo demanda            (< 1.000 req/día)
+  #   media    → regular, varias veces por hora      (1K–100K req/día)
+  #   alta     → frecuente, picos predecibles        (> 100K req/día)
+  #   continua → 24/7, flujo constante de eventos    (transacciones en tiempo real)
+
+  presupuesto_mensual_usd: 50
+  # → Presupuesto mensual máximo para infraestructura AWS (USD)
+  # Referencia:
+  #   < $50      → startup / MVP / prueba de concepto
+  #   $50–$200   → pyme / producto en crecimiento
+  #   > $200     → corporativo / producción a escala
+
+  escalabilidad_requerida: "media"
+  # → Capacidad de escalar ante picos de tráfico
+  # Opciones:
+  #   baja   → tráfico predecible y controlado, sin picos esperados
+  #   media  → picos ocasionales, auto-scaling deseable
+  #   alta   → picos imprevisibles o crecimiento acelerado esperado
+
+  volumen_datos_kb:        # (opcional) Volumen estimado en KB por request
+  # Si se omite, se calcula automáticamente desde num_features:
+  #   volumen_datos_kb = num_features × 8 / 1024
+
+
+# ── 3. CONTEXTO ORGANIZACIONAL ────────────────────────────────────────────────
+organizacion:
+
+  experiencia_tecnica: "media"
+  # → Nivel de experiencia del equipo con infraestructura cloud
+  # Opciones:
+  #   baja   → primer despliegue, sin experiencia en cloud
+  #   media  → experiencia básica en AWS, sin DevOps dedicado
+  #   alta   → equipo con IaC (Terraform/CDK), CI/CD, cloud-native
+
+  proveedor_cloud: "aws"
+  # (opcional) Proveedor de nube — actualmente solo AWS está soportado
+  # Opciones: aws | gcp | azure

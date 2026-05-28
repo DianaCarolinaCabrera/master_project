@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ML Arch Recommender — Guía de Implementación</title>
+  <style>
+    :root {
+      --bg: #0f1117; --bg2: #161b27; --bg3: #1e2535; --border: #2a3349;
+      --accent: #4f8ef7; --accent2: #7c3aed; --green: #22c55e;
+      --yellow: #f59e0b; --red: #ef4444; --orange: #f97316; --cyan: #06b6d4;
+      --text: #e2e8f0; --muted: #94a3b8; --code-bg: #0d1117;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+
+    /* HEADER */
+    .header { background: linear-gradient(135deg,#1a1f35 0%,#0f1117 50%,#1a0f35 100%); border-bottom:1px solid var(--border); padding:2.5rem 2rem; text-align:center; }
+    .badge { display:inline-block; background:var(--accent2); color:white; padding:.25rem .75rem; border-radius:999px; font-size:.72rem; font-weight:700; margin-bottom:.75rem; letter-spacing:.05em; }
+    .header h1 { font-size:2rem; font-weight:700; background:linear-gradient(135deg,#4f8ef7,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .header p { color:var(--muted); margin-top:.4rem; font-size:.95rem; max-width:620px; margin-left:auto; margin-right:auto; }
+    .meta-row { display:flex; justify-content:center; gap:1.5rem; margin-top:1.2rem; flex-wrap:wrap; }
+    .meta-item { color:var(--muted); font-size:.82rem; } .meta-item span { color:var(--text); font-weight:600; }
+
+    /* LAYOUT */
+    .container { max-width:1080px; margin:0 auto; padding:2rem; }
+    .section { margin-bottom:3rem; }
+    .section-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; padding-bottom:.6rem; border-bottom:1px solid var(--border); }
+    .section-num { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.85rem; flex-shrink:0; }
+    .section-header h2 { font-size:1.25rem; font-weight:600; }
+    .section-desc { color:var(--muted); font-size:.82rem; margin-top:.15rem; }
+    .card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:1.4rem; margin-bottom:1rem; }
+    .card-title { font-weight:600; margin-bottom:.75rem; display:flex; align-items:center; gap:.5rem; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+    .divider { border:none; border-top:1px solid var(--border); margin:2.5rem 0; }
+
+    /* TOC */
+    .toc { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:1.4rem; margin-bottom:2.5rem; }
+    .toc h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:.9rem; }
+    .toc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.4rem; }
+    .toc-item { display:flex; align-items:center; gap:.5rem; text-decoration:none; color:var(--text); padding:.45rem .7rem; border-radius:6px; font-size:.875rem; transition:background .15s; }
+    .toc-item:hover { background:var(--bg3); }
+    .toc-num { width:20px; height:20px; border-radius:50%; background:var(--accent); color:white; font-size:.68rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    /* ═══════════════════════════════════════════════════
+       DIAGRAMA PRINCIPAL — Two-phase flow, no overflow
+    ═══════════════════════════════════════════════════ */
+    .diagram-wrap { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:2rem 1.5rem; }
+    .diagram-label { text-align:center; font-size:.72rem; color:var(--muted); margin-bottom:1.75rem; letter-spacing:.04em; text-transform:uppercase; }
+
+    /* Phase labels */
+    .phase-row { display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:stretch; }
+    .phase-box { border:1.5px dashed var(--border); border-radius:14px; padding:1.25rem 1rem 1rem; position:relative; }
+    .phase-box.phase-n8n  { border-color:rgba(79,142,247,.4); background:rgba(79,142,247,.03); }
+    .phase-box.phase-aws  { border-color:rgba(249,115,22,.4); background:rgba(249,115,22,.03); }
+    .phase-label { position:absolute; top:-11px; left:14px; background:var(--bg2); padding:0 .5rem; font-size:.68rem; font-weight:700; letter-spacing:.06em; }
+    .phase-label.l-n8n  { color:var(--accent); }
+    .phase-label.l-aws  { color:var(--orange); }
+
+    /* Nodes inside phases */
+    .phase-nodes { display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:nowrap; }
+    .node { background:var(--bg3); border:2px solid var(--border); border-radius:10px; padding:.85rem .7rem; text-align:center; min-width:90px; max-width:110px; flex-shrink:0; }
+    .node.n-accent { border-color:rgba(79,142,247,.6); }
+    .node.n-aws    { border-color:rgba(249,115,22,.6); }
+    .node.n-green  { border-color:rgba(34,197,94,.6); background:rgba(34,197,94,.05); }
+    .node .icon { font-size:1.5rem; display:block; margin-bottom:.3rem; }
+    .node .lbl  { font-size:.7rem; font-weight:600; line-height:1.3; }
+    .node .sub  { font-size:.63rem; color:var(--muted); margin-top:.15rem; line-height:1.2; }
+
+    /* Arrows inside flow */
+    .arr { display:flex; align-items:center; padding:0 4px; flex-shrink:0; }
+    .arr-inner { display:flex; flex-direction:column; align-items:center; }
+    .arr-lbl { font-size:.6rem; color:var(--muted); white-space:nowrap; margin-bottom:2px; }
+    .arr-line { width:28px; height:2px; background:linear-gradient(90deg,var(--border),var(--accent)); }
+    .arr-tip  { width:0; height:0; border-top:4px solid transparent; border-bottom:4px solid transparent; border-left:7px solid var(--accent); }
+
+    /* Center connector between phases */
+    .phase-connector { display:flex; align-items:center; justify-content:center; padding:0 .75rem; }
+    .ph-conn-inner { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .ph-conn-lbl { font-size:.6rem; color:var(--muted); white-space:nowrap; }
+    .ph-conn-line { width:36px; height:2px; background:linear-gradient(90deg,var(--accent),var(--orange)); }
+    .ph-conn-tip  { width:0; height:0; border-top:4px solid transparent; border-bottom:4px solid transparent; border-left:7px solid var(--orange); }
+
+    /* Output node at end */
+    .output-wrap { display:flex; align-items:center; gap:.75rem; margin-top:1.5rem; }
+    .output-arr { display:flex; flex-direction:column; align-items:center; }
+    .output-arr-line { width:2px; height:30px; background:linear-gradient(180deg,var(--accent2),var(--green)); margin:0 auto; }
+    .output-arr-tip  { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:8px solid var(--green); margin:0 auto; }
+    .output-box { flex:1; background:rgba(34,197,94,.06); border:1.5px solid rgba(34,197,94,.4); border-radius:12px; padding:1rem 1.25rem; display:flex; align-items:center; gap:1rem; }
+    .output-icon { font-size:1.75rem; flex-shrink:0; }
+    .output-text h4 { font-size:.9rem; font-weight:700; color:var(--green); }
+    .output-text p  { font-size:.78rem; color:var(--muted); margin-top:.2rem; line-height:1.5; }
+
+    /* Legend */
+    .legend { display:flex; gap:1.25rem; justify-content:center; margin-top:1.5rem; flex-wrap:wrap; }
+    .legend-item { display:flex; align-items:center; gap:.35rem; font-size:.72rem; color:var(--muted); }
+    .legend-dot { width:12px; height:12px; border-radius:3px; border:2px solid; }
+
+    /* ═══════════════════════════════════
+       IO SCHEMA
+    ═══════════════════════════════════ */
+    .io-grid { display:grid; grid-template-columns:1fr 40px 1fr; gap:0; align-items:start; }
+    .io-box { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:1.2rem; }
+    .io-box h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.9rem; padding-bottom:.5rem; border-bottom:1px solid var(--border); }
+    .io-mid { display:flex; align-items:center; justify-content:center; }
+    .io-arr { display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .io-line { width:2px; height:40px; background:linear-gradient(180deg,var(--accent),var(--accent2)); border-radius:2px; }
+    .io-tip  { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:8px solid var(--accent2); }
+    .field { display:flex; align-items:baseline; gap:.5rem; margin-bottom:.55rem; font-size:.8rem; }
+    .f-name { font-family:monospace; color:var(--cyan); min-width:135px; flex-shrink:0; font-size:.77rem; }
+    .f-type { font-size:.68rem; background:var(--bg); padding:.1rem .35rem; border-radius:3px; color:var(--yellow); font-family:monospace; flex-shrink:0; }
+    .f-desc { font-size:.72rem; color:var(--muted); }
+    .f-section { font-size:.72rem; color:var(--muted); margin:.75rem 0 .4rem; padding-top:.6rem; border-top:1px solid var(--border); }
+
+    /* CODE */
+    .code-block { background:var(--code-bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:.75rem 0; }
+    .code-hdr { display:flex; align-items:center; justify-content:space-between; padding:.5rem 1rem; background:var(--bg3); border-bottom:1px solid var(--border); }
+    .code-lang { font-size:.7rem; color:var(--muted); font-family:monospace; }
+    .code-file { font-size:.7rem; color:var(--accent); font-family:monospace; }
+    pre { padding:1.1rem; overflow-x:auto; font-family:'Courier New',monospace; font-size:.8rem; line-height:1.65; color:#abb2bf; }
+    .kw{color:#c678dd} .fn{color:#61afef} .str{color:#98c379} .cm{color:#5c6370;font-style:italic} .num{color:#d19a66} .key{color:#e06c75}
+
+    /* STEPS */
+    .step { display:flex; gap:1rem; margin-bottom:1.4rem; }
+    .s-num { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.78rem; flex-shrink:0; margin-top:.1rem; }
+    .s-body { flex:1; }
+    .s-title { font-weight:600; margin-bottom:.25rem; font-size:.95rem; }
+    .s-desc  { color:var(--muted); font-size:.875rem; }
+
+    /* TABLES */
+    .tbl { width:100%; border-collapse:collapse; font-size:.86rem; }
+    .tbl th { background:var(--bg3); color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; padding:.55rem .9rem; text-align:left; border-bottom:1px solid var(--border); }
+    .tbl td { padding:.6rem .9rem; border-bottom:1px solid var(--border); vertical-align:top; }
+    .tbl tr:last-child td { border-bottom:none; }
+    .tbl tr:hover td { background:var(--bg3); }
+
+    /* TAGS */
+    .tag { display:inline-block; padding:.12rem .5rem; border-radius:4px; font-size:.7rem; font-weight:600; }
+    .tg { background:rgba(34,197,94,.15);  color:var(--green); }
+    .tb { background:rgba(79,142,247,.15); color:var(--accent); }
+    .to { background:rgba(249,115,22,.15); color:var(--orange); }
+    .tp { background:rgba(124,58,237,.15); color:#a78bfa; }
+    .tr { background:rgba(239,68,68,.15);  color:var(--red); }
+
+    /* CALLOUTS */
+    .callout { border-left:3px solid var(--accent); background:rgba(79,142,247,.07); border-radius:0 8px 8px 0; padding:.9rem 1.1rem; margin:.9rem 0; font-size:.875rem; }
+    .callout.warn { border-color:var(--yellow); background:rgba(245,158,11,.07); }
+    .callout.ok   { border-color:var(--green);  background:rgba(34,197,94,.07); }
+    .callout strong { display:block; margin-bottom:.2rem; }
+
+    /* FOCUS BOX */
+    .focus-box { background:linear-gradient(135deg,rgba(79,142,247,.08),rgba(124,58,237,.08)); border:1px solid rgba(79,142,247,.25); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; }
+    .focus-box h3 { font-size:1rem; font-weight:700; color:var(--accent); margin-bottom:.6rem; }
+    .focus-box p  { font-size:.9rem; color:var(--text); line-height:1.7; }
+
+    /* SCORE BARS */
+    .score-row { display:flex; align-items:center; gap:.75rem; margin-bottom:.5rem; }
+    .score-name { font-size:.78rem; color:var(--muted); min-width:120px; flex-shrink:0; }
+    .score-track { flex:1; height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; }
+    .score-fill  { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .score-val   { font-size:.75rem; font-weight:700; color:var(--accent); min-width:28px; text-align:right; }
+
+    /* RESPONSIVE */
+    @media(max-width:720px){
+      .grid-2,.grid-3,.io-grid,.phase-row { grid-template-columns:1fr; }
+      .phase-connector { transform:rotate(90deg); margin:.5rem auto; }
+      .phase-nodes { flex-wrap:wrap; justify-content:center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<div class="header">
+  <div class="badge">TESIS DE MAESTRÍA · ANALÍTICA DE DATOS</div>
+  <h1>Agente Recomendador de Arquitecturas ML en AWS</h1>
+  <p>El agente recibe los requerimientos de despliegue de un modelo ya entrenado y recomienda la arquitectura AWS más adecuada. El caso de estudio valida la recomendación con un despliegue real.</p>
+  <div class="meta-row">
+    <div class="meta-item">👩‍💻 <span>Diana Cabrera · Andrea Mercado · Leonardo Lasso</span></div>
+    <div class="meta-item">☁️ Plataforma: <span>AWS Serverless</span></div>
+    <div class="meta-item">🔧 Orquestador: <span>n8n</span></div>
+    <div class="meta-item">📅 <span>Abril 2026</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Contenido</h2>
+    <div class="toc-grid">
+      <a class="toc-item" href="#s0"><div class="toc-num">0</div> Enfoque del proyecto</a>
+      <a class="toc-item" href="#s1"><div class="toc-num">1</div> Diagrama del sistema completo</a>
+      <a class="toc-item" href="#s2"><div class="toc-num">2</div> Input / Output del agente (n8n)</a>
+      <a class="toc-item" href="#s3"><div class="toc-num">3</div> Input / Output del endpoint AWS</a>
+      <a class="toc-item" href="#s4"><div class="toc-num">4</div> Caso de estudio: Credit Risk</a>
+      <a class="toc-item" href="#s5"><div class="toc-num">5</div> Estructura del proyecto</a>
+      <a class="toc-item" href="#s6"><div class="toc-num">6</div> Implementación paso a paso</a>
+      <a class="toc-item" href="#s7"><div class="toc-num">7</div> Flujo n8n — los 6 nodos</a>
+      <a class="toc-item" href="#s8"><div class="toc-num">8</div> Motor multicriterio</a>
+      <a class="toc-item" href="#s9"><div class="toc-num">9</div> Validación y métricas</a>
+      <a class="toc-item" href="#s10"><div class="toc-num">10</div> Alcance del demo</a>
+      <a class="toc-item" href="#s11"><div class="toc-num" style="background:var(--green)">11</div> Qué valida el agente (3 capas)</a>
+      <a class="toc-item" href="#s12"><div class="toc-num" style="background:var(--green)">12</div> Formato del modelo entrenado</a>
+    </div>
+  </div>
+
+  <!-- ══════════════ S0: ENFOQUE REAL DEL PROYECTO ══════════════ -->
+  <div class="section" id="s0">
+    <div class="section-header">
+      <div class="section-num">0</div>
+      <div><h2>Enfoque del proyecto — qué hace y qué NO hace el agente</h2></div>
+    </div>
+
+    <div class="focus-box">
+      <h3>🎯 El agente es un recomendador de arquitecturas de despliegue</h3>
+      <p>
+        El agente <strong>no entrena modelos</strong>. Recibe como entrada la descripción de un modelo <strong>ya existente</strong>
+        (en este caso, un modelo de riesgo crediticio ya entrenado con sus parámetros) y los <strong>requerimientos de despliegue</strong>
+        (latencia, presupuesto, frecuencia, etc.). A partir de esos criterios, <strong>recomienda qué arquitectura AWS usar</strong>
+        para desplegarlo: serverless, batch, streaming, contenedores, o SageMaker.
+        <br><br>
+        El caso de estudio de Credit Risk es simplemente el <em>objeto de estudio</em> — el modelo que se quiere desplegar.
+        Sirve para demostrar que la recomendación del agente es coherente y el despliegue funciona.
+      </p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color:var(--green)">✅ Qué hace el agente</div>
+        <div style="font-size:.875rem;line-height:2;color:var(--muted)">
+          ✓ Recibe parámetros de un modelo ya entrenado<br>
+          ✓ Evalúa 5 arquitecturas con scoring multicriterio<br>
+          ✓ Recomienda la arquitectura más adecuada<br>
+          ✓ Justifica la decisión con scores por criterio<br>
+          ✓ Valida la recomendación llamando al endpoint real<br>
+          ✓ Retorna el resultado completo al usuario
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:var(--red)">❌ Qué NO hace el agente</div>
+        <div style="font-size:.875rem;line-height:2;color:var(--muted)">
+          ✗ No entrena modelos de ML<br>
+          ✗ No evalúa la calidad del modelo (AUC, F1, etc.)<br>
+          ✗ No gestiona la infraestructura en producción<br>
+          ✗ No monitorea el modelo después del despliegue<br>
+          ✗ No recom. hiperparámetros ni arquitecturas de red<br>
+          ✗ No es un AutoML
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>📌 Analogía para la sustentación</strong>
+      El agente es como un arquitecto de software: no escribe el código de tu aplicación, pero sí te dice si debes usar microservicios, monolito o serverless. El "código" aquí es el modelo de ML ya entrenado.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S1: DIAGRAMA DEL SISTEMA ══════════════ -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div><h2>Diagrama del sistema completo</h2><div class="section-desc">Dos fases: recomendación → validación con despliegue real</div></div>
+    </div>
+
+    <div class="diagram-wrap">
+      <div class="diagram-label">Flujo del sistema — Fase 1: Recomendación &nbsp;|&nbsp; Fase 2: Validación</div>
+
+      <!-- ── ROW: Phase 1 + connector + Phase 2 ── -->
+      <div class="phase-row">
+
+        <!-- FASE 1: n8n -->
+        <div class="phase-box phase-n8n">
+          <div class="phase-label l-n8n">FASE 1 — n8n (Agente Recomendador)</div>
+          <div class="phase-nodes">
+            <div class="node n-accent">
+              <span class="icon">👤</span>
+              <div class="lbl">Usuario</div>
+              <div class="sub">criterios de despliegue</div>
+            </div>
+            <div class="arr">
+              <div class="arr-inner">
+                <div class="arr-lbl">JSON</div>
+                <div style="display:flex;align-items:center">
+                  <div class="arr-line"></div><div class="arr-tip"></div>
+                </div>
+              </div>
+            </div>
+            <div class="node n-accent">
+              <span class="icon">🔄</span>
+              <div class="lbl">Webhook n8n</div>
+              <div class="sub">POST /recomendar</div>
+            </div>
+            <div class="arr">
+              <div class="arr-inner">
+                <div class="arr-lbl">criterios</div>
+                <div style="display:flex;align-items:center">
+                  <div class="arr-line"></div><div class="arr-tip"></div>
+                </div>
+              </div>
+            </div>
+            <div class="node n-accent" style="border-color:var(--accent2);background:rgba(124,58,237,.1)">
+              <span class="icon">🧮</span>
+              <div class="lbl">Motor Scoring</div>
+              <div class="sub">5 arq × 5 criterios</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONNECTOR -->
+        <div class="phase-connector">
+          <div class="ph-conn-inner">
+            <div class="ph-conn-lbl">valida con</div>
+            <div style="display:flex;align-items:center">
+              <div class="ph-conn-line"></div><div class="ph-conn-tip"></div>
+            </div>
+            <div class="ph-conn-lbl">llamada real</div>
+          </div>
+        </div>
+
+        <!-- FASE 2: AWS -->
+        <div class="phase-box phase-aws">
+          <div class="phase-label l-aws">FASE 2 — AWS (Despliegue del Modelo)</div>
+          <div class="phase-nodes">
+            <div class="node n-aws">
+              <span class="icon">🌐</span>
+              <div class="lbl">API Gateway</div>
+              <div class="sub">REST HTTPS</div>
+            </div>
+            <div class="arr">
+              <div class="arr-inner">
+                <div class="arr-lbl">invoke</div>
+                <div style="display:flex;align-items:center">
+                  <div class="arr-line" style="background:linear-gradient(90deg,var(--border),var(--orange))"></div>
+                  <div class="arr-tip" style="border-left-color:var(--orange)"></div>
+                </div>
+              </div>
+            </div>
+            <div class="node n-aws">
+              <span class="icon">⚡</span>
+              <div class="lbl">AWS Lambda</div>
+              <div class="sub">Python 3.11 · inferencia</div>
+            </div>
+            <div class="arr">
+              <div class="arr-inner">
+                <div class="arr-lbl">carga modelo</div>
+                <div style="display:flex;align-items:center">
+                  <div class="arr-line" style="background:linear-gradient(90deg,var(--orange),var(--green))"></div>
+                  <div class="arr-tip" style="border-left-color:var(--green)"></div>
+                </div>
+              </div>
+            </div>
+            <div class="node n-green">
+              <span class="icon">🗄️</span>
+              <div class="lbl">Amazon S3</div>
+              <div class="sub">credit_model.joblib</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTPUT FINAL -->
+      <div style="max-width:580px;margin:1.5rem auto 0;">
+        <div style="text-align:center;margin-bottom:.5rem">
+          <div class="output-arr">
+            <div class="output-arr-line"></div>
+            <div class="output-arr-tip"></div>
+          </div>
+        </div>
+        <div class="output-box">
+          <div class="output-icon">📊</div>
+          <div class="output-text">
+            <h4>Respuesta consolidada al usuario</h4>
+            <p>Arquitectura recomendada + score + justificación + resultado real de inferencia del modelo desplegado</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEGEND -->
+      <div class="legend" style="margin-top:1.25rem">
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--accent)"></div> n8n · Agente recomendador</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--accent2)"></div> Motor scoring multicriterio</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--orange)"></div> AWS Cloud</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--green)"></div> Modelo ML desplegado (caso de estudio)</div>
+      </div>
+    </div>
+
+    <!-- Justificación Serverless -->
+    <div class="card" style="margin-top:1.25rem">
+      <div class="card-title">⚖️ Por qué el agente recomienda Serverless para el caso Credit Risk</div>
+      <table class="tbl">
+        <thead><tr><th>Criterio</th><th>Parámetro del caso</th><th>Score Serverless</th><th>Por qué es la mejor opción</th></tr></thead>
+        <tbody>
+          <tr><td>Latencia</td><td>≤ 1.000 ms</td><td><span class="tag tg">9/10</span></td><td style="color:var(--muted)">Lambda warm responde en ~50ms</td></tr>
+          <tr><td>Frecuencia</td><td>Baja (esporádica)</td><td><span class="tag tg">10/10</span></td><td style="color:var(--muted)">Sin tráfico = $0. Ideal para llamadas ocasionales</td></tr>
+          <tr><td>Presupuesto</td><td>&lt; $50 USD/mes</td><td><span class="tag tg">10/10</span></td><td style="color:var(--muted)">Free tier: 1M requests/mes incluidas</td></tr>
+          <tr><td>Escalabilidad</td><td>Media</td><td><span class="tag tg">9/10</span></td><td style="color:var(--muted)">Lambda escala automáticamente sin configuración</td></tr>
+          <tr><td>Experiencia técnica</td><td>Media</td><td><span class="tag tg">9/10</span></td><td style="color:var(--muted)">No requiere gestión de servidores ni clusters</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S2: INPUT / OUTPUT DEL AGENTE n8n ══════════════ -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div><h2>Input / Output del agente n8n</h2><div class="section-desc">Qué le envías al agente y qué te devuelve</div></div>
+    </div>
+
+    <div class="io-grid">
+      <!-- INPUT -->
+      <div class="io-box">
+        <h3>📥 Lo que recibe n8n (tu POST request)</h3>
+
+        <div class="f-section">Descripción del modelo ya entrenado:</div>
+        <div class="field"><span class="f-name">tipo_modelo</span><span class="f-type">string</span><span class="f-desc">"clasificacion_binaria"</span></div>
+        <div class="field"><span class="f-name">descripcion</span><span class="f-type">string</span><span class="f-desc">Qué hace el modelo</span></div>
+
+        <div class="f-section">Requerimientos de despliegue (criterios del agente):</div>
+        <div class="field"><span class="f-name">latencia_requerida_ms</span><span class="f-type">number</span><span class="f-desc">Ej: 800</span></div>
+        <div class="field"><span class="f-name">frecuencia_inferencia</span><span class="f-type">"baja"|"media"|"alta"|"continua"</span></div>
+        <div class="field"><span class="f-name">volumen_datos_kb</span><span class="f-type">number</span><span class="f-desc">Tamaño del payload</span></div>
+        <div class="field"><span class="f-name">presupuesto_mensual_usd</span><span class="f-type">number</span><span class="f-desc">Ej: 30</span></div>
+        <div class="field"><span class="f-name">escalabilidad_requerida</span><span class="f-type">"baja"|"media"|"alta"</span></div>
+        <div class="field"><span class="f-name">experiencia_tecnica</span><span class="f-type">"baja"|"media"|"alta"</span></div>
+
+        <div class="f-section">Datos del caso de estudio (para validar el endpoint):</div>
+        <div class="field"><span class="f-name">edad</span><span class="f-type">number</span></div>
+        <div class="field"><span class="f-name">ingresos_mensuales</span><span class="f-type">number</span></div>
+        <div class="field"><span class="f-name">ratio_deuda</span><span class="f-type">float 0–1</span></div>
+        <div class="field"><span class="f-name">meses_historial_crediticio</span><span class="f-type">number</span></div>
+        <div class="field"><span class="f-name">num_cuentas_activas</span><span class="f-type">number</span></div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="io-mid">
+        <div class="io-arr">
+          <div class="io-line"></div>
+          <div class="io-tip"></div>
+        </div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="io-box">
+        <h3>📤 Lo que devuelve n8n (respuesta consolidada)</h3>
+
+        <div class="f-section">La recomendación del agente:</div>
+        <div class="field"><span class="f-name">arquitectura_id</span><span class="f-type">string</span><span class="f-desc">"serverless"</span></div>
+        <div class="field"><span class="f-name">arquitectura_nombre</span><span class="f-type">string</span><span class="f-desc">"Serverless (Lambda + API GW)"</span></div>
+        <div class="field"><span class="f-name">servicios_aws</span><span class="f-type">string[]</span><span class="f-desc">["Lambda","API GW","S3"]</span></div>
+        <div class="field"><span class="f-name">score</span><span class="f-type">float</span><span class="f-desc">9.45 / 10</span></div>
+        <div class="field"><span class="f-name">confianza</span><span class="f-type">float 0–1</span><span class="f-desc">0.74 (diferencia vs 2do lugar)</span></div>
+        <div class="field"><span class="f-name">justificacion</span><span class="f-type">string</span><span class="f-desc">Texto con los criterios que ganaron</span></div>
+        <div class="field"><span class="f-name">ranking_completo</span><span class="f-type">Array[5]</span><span class="f-desc">Las 5 arquitecturas con scores</span></div>
+
+        <div class="f-section">Validación: resultado real del modelo desplegado:</div>
+        <div class="field"><span class="f-name">riesgo</span><span class="f-type">"ALTO"|"BAJO"</span><span class="f-desc">Predicción del modelo</span></div>
+        <div class="field"><span class="f-name">probabilidad_riesgo_alto</span><span class="f-type">float 0–1</span><span class="f-desc">0.1823</span></div>
+        <div class="field"><span class="f-name">arquitectura_despliegue</span><span class="f-type">string</span><span class="f-desc">"serverless-lambda" ← confirma arq.</span></div>
+        <div class="field"><span class="f-name">endpoint_disponible</span><span class="f-type">boolean</span><span class="f-desc">true = endpoint respondió OK</span></div>
+
+        <div class="f-section" style="color:var(--green)">Primeros pasos para implementar la recomendación:</div>
+        <div class="field"><span class="f-name">configuracion_inicial</span><span class="f-type">Array[4]</span><span class="f-desc">Pasos con comandos CLI listos para ejecutar</span></div>
+        <div style="margin-left:135px;margin-top:.2rem;margin-bottom:.6rem">
+          <div style="font-size:.72rem;color:var(--muted)">Cada paso contiene: <code>numero</code>, <code>titulo</code>, <code>descripcion</code>, <code>comando</code></div>
+        </div>
+
+        <div class="f-section" style="color:var(--yellow)">Si hay restricciones organizacionales:</div>
+        <div class="field"><span class="f-name">alternativas_viables</span><span class="f-type">Array[1–4]</span><span class="f-desc">Opciones alternativas con contexto de cuándo elegirlas</span></div>
+        <div style="margin-left:135px;margin-top:.2rem">
+          <div style="font-size:.72rem;color:var(--muted)">Cada alternativa contiene: <code>nombre</code>, <code>score_total</code>, <code>cuando_elegirla</code>, <code>trade_off</code>, <code>costo_estimado_usd</code></div>
+        </div>
+
+        <div class="f-section">Diagnóstico del input:</div>
+        <div class="field"><span class="f-name">advertencias</span><span class="f-type">Array</span><span class="f-desc">Restricciones duras o tensiones detectadas (puede ser vacío)</span></div>
+        <div class="field"><span class="f-name">razonamiento_completo</span><span class="f-type">string</span><span class="f-desc">Explicación detallada con fortalezas y descartados</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;border-color:rgba(34,197,94,.2)">
+      <div class="card-title" style="color:var(--green)">📤 Ejemplo de respuesta completa del agente (JSON resumido)</div>
+      <div class="code-block">
+        <div class="code-hdr"><span class="code-lang">JSON — output n8n</span></div>
+        <pre>{
+  <span class="key">"recomendacion"</span>: {
+    <span class="key">"arquitectura_id"</span>: <span class="str">"serverless"</span>,
+    <span class="key">"score"</span>: <span class="num">9.45</span>,
+    <span class="key">"confianza"</span>: <span class="num">1.0</span>,
+    <span class="key">"justificacion"</span>: <span class="str">"Serverless 9.45/10. Criterio decisivo: Presupuesto (20%)..."</span>,
+    <span class="key">"razonamiento_completo"</span>: <span class="str">"RECOMENDACIÓN: Serverless...\nFORTALEZAS:..."</span>
+  },
+  <span class="key">"configuracion_inicial"</span>: [
+    { <span class="key">"numero"</span>: <span class="num">1</span>, <span class="key">"titulo"</span>: <span class="str">"Subir modelo a S3"</span>,
+      <span class="key">"comando"</span>: <span class="str">"aws s3 mb s3://mi-modelo-bucket\naws s3 cp model.joblib s3://..."</span> },
+    { <span class="key">"numero"</span>: <span class="num">2</span>, <span class="key">"titulo"</span>: <span class="str">"Crear función Lambda"</span>,
+      <span class="key">"comando"</span>: <span class="str">"bash deploy/build_lambda.sh\naws lambda create-function..."</span> },
+    { <span class="key">"numero"</span>: <span class="num">3</span>, <span class="key">"titulo"</span>: <span class="str">"Crear API Gateway"</span>, <span class="key">"comando"</span>: <span class="str">"bash deploy/deploy.sh"</span> },
+    { <span class="key">"numero"</span>: <span class="num">4</span>, <span class="key">"titulo"</span>: <span class="str">"Probar el endpoint"</span>,
+      <span class="key">"comando"</span>: <span class="str">"curl -X POST https://TU_ENDPOINT/prod/predict -d '{...}'"</span> }
+  ],
+  <span class="key">"alternativas_viables"</span>: [
+    { <span class="key">"id"</span>: <span class="str">"sagemaker"</span>, <span class="key">"score_total"</span>: <span class="num">5.9</span>,
+      <span class="key">"cuando_elegirla"</span>: <span class="str">"Si la empresa tiene equipo MLOps dedicado y necesita model registry..."</span>,
+      <span class="key">"trade_off"</span>: <span class="str">"Ganas: plataforma MLOps completa. Pierdes: ~$38/mes mínimo."</span>,
+      <span class="key">"costo_estimado_usd"</span>: <span class="str">"$38–$200 / mes"</span> },
+    { <span class="key">"id"</span>: <span class="str">"batch"</span>, <span class="key">"score_total"</span>: <span class="num">5.8</span>,
+      <span class="key">"cuando_elegirla"</span>: <span class="str">"Si no necesita tiempo real y los datos ya están en S3..."</span>,
+      <span class="key">"costo_estimado_usd"</span>: <span class="str">"$2–$20 / mes"</span> }
+  ],
+  <span class="key">"advertencias"</span>: [],
+  <span class="key">"resultado_inferencia_aws"</span>: {
+    <span class="key">"riesgo"</span>: <span class="str">"BAJO"</span>, <span class="key">"probabilidad_riesgo_alto"</span>: <span class="num">0.1823</span>
+  }
+}</pre>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top:1.25rem">
+      <div class="code-hdr"><span class="code-lang">bash — ejemplo completo de llamada</span><span class="code-file">POST /recomendar-arquitectura</span></div>
+      <pre>curl -X POST <span class="str">'https://tu-n8n.cloud/webhook/recomendar-arquitectura'</span> \
+  -H <span class="str">'Content-Type: application/json'</span> \
+  -d <span class="str">'{
+    "caso_negocio": {
+      "descripcion": "Modelo de riesgo crediticio. Predice si un solicitante pagará.",
+      "tipo_modelo": "clasificacion_binaria",
+      "latencia_requerida_ms": 800,
+      "frecuencia_inferencia": "baja",
+      "volumen_datos_kb": 5,
+      "presupuesto_mensual_usd": 30,
+      "escalabilidad_requerida": "media",
+      "experiencia_tecnica": "media"
+    },
+    "datos_prueba": {
+      "edad": 35,
+      "ingresos_mensuales": 3500000,
+      "ratio_deuda": 0.35,
+      "meses_historial_crediticio": 24,
+      "num_cuentas_activas": 3
+    }
+  }'</span></pre>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S3: INPUT/OUTPUT AWS ══════════════ -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div><h2>Input / Output del endpoint AWS (Lambda)</h2><div class="section-desc">Qué espera el modelo desplegado y qué responde</div></div>
+    </div>
+
+    <div class="callout">
+      <strong>ℹ️ Contexto</strong>
+      Este endpoint no lo llama el usuario directamente. Lo llama el nodo 4 de n8n automáticamente con los <code>datos_prueba</code> del request original. El usuario nunca necesita conocer esta URL.
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">📥 Request al Lambda</div>
+        <div class="code-block">
+          <div class="code-hdr"><span class="code-lang">JSON</span><span class="code-file">POST /predict</span></div>
+          <pre>{
+  <span class="key">"edad"</span>: <span class="num">35</span>,
+  <span class="key">"ingresos_mensuales"</span>: <span class="num">3500000</span>,
+  <span class="key">"ratio_deuda"</span>: <span class="num">0.35</span>,
+  <span class="key">"meses_historial_crediticio"</span>: <span class="num">24</span>,
+  <span class="key">"num_cuentas_activas"</span>: <span class="num">3</span>
+}</pre>
+        </div>
+        <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem">
+          → Exactamente los 5 features que el modelo espera<br>
+          → Se pasan como <code>datos_prueba</code> desde n8n
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Response del Lambda</div>
+        <div class="code-block">
+          <div class="code-hdr"><span class="code-lang">JSON 200 OK</span></div>
+          <pre>{
+  <span class="key">"riesgo"</span>: <span class="str">"BAJO"</span>,
+  <span class="key">"probabilidad_riesgo_alto"</span>: <span class="num">0.1823</span>,
+  <span class="key">"probabilidad_riesgo_bajo"</span>: <span class="num">0.8177</span>,
+  <span class="key">"features_recibidas"</span>: { <span class="cm">... echo ...</span> },
+  <span class="key">"modelo_version"</span>: <span class="str">"1.0.0"</span>,
+  <span class="key">"arquitectura_despliegue"</span>: <span class="str">"serverless-lambda"</span>
+}</pre>
+        </div>
+        <div style="font-size:.8rem;color:var(--muted);margin-top:.5rem">
+          → <code>arquitectura_despliegue</code> confirma que el modelo corre en serverless<br>
+          → Mismo tipo que el agente recomendó ← evidencia de coherencia
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:.5rem">
+      <div class="card-title">⚙️ Qué hace Lambda internamente</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;margin-top:.5rem">
+        <div style="background:var(--bg3);border-radius:8px;padding:.75rem;text-align:center;font-size:.78rem">
+          <div style="font-size:1.2rem;margin-bottom:.3rem">1️⃣</div>
+          <div style="color:var(--text);font-weight:600">Parsea JSON</div>
+          <div style="color:var(--muted);margin-top:.2rem">Valida los 5 campos requeridos</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.75rem;text-align:center;font-size:.78rem">
+          <div style="font-size:1.2rem;margin-bottom:.3rem">2️⃣</div>
+          <div style="color:var(--text);font-weight:600">Carga modelo de S3</div>
+          <div style="color:var(--muted);margin-top:.2rem">Solo en cold start. Warm = usa cache en memoria</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.75rem;text-align:center;font-size:.78rem">
+          <div style="font-size:1.2rem;margin-bottom:.3rem">3️⃣</div>
+          <div style="color:var(--text);font-weight:600">Construye vector</div>
+          <div style="color:var(--muted);margin-top:.2rem">numpy array de 5 features en orden correcto</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.75rem;text-align:center;font-size:.78rem">
+          <div style="font-size:1.2rem;margin-bottom:.3rem">4️⃣</div>
+          <div style="color:var(--text);font-weight:600">predict_proba()</div>
+          <div style="color:var(--muted);margin-top:.2rem">Logistic Regression retorna prob[0] y prob[1]</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.75rem;text-align:center;font-size:.78rem">
+          <div style="font-size:1.2rem;margin-bottom:.3rem">5️⃣</div>
+          <div style="color:var(--text);font-weight:600">Clasifica</div>
+          <div style="color:var(--muted);margin-top:.2rem">prob ≥ 0.5 → ALTO, prob &lt; 0.5 → BAJO</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S4: CASO DE ESTUDIO ══════════════ -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div><h2>Caso de estudio: Credit Risk Scoring</h2><div class="section-desc">El modelo que se quiere desplegar — no el objetivo del agente, sino su sujeto</div></div>
+    </div>
+
+    <div class="callout ok">
+      <strong>✅ Rol del caso de estudio</strong>
+      El modelo de riesgo crediticio existe y tiene sus parámetros de entrenamiento. El agente recibe la descripción de este modelo y las necesidades de negocio, y decide cómo desplegarlo. Luego valida que el despliegue recomendado (serverless) funciona correctamente.
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🏦 El modelo (ya entrenado)</div>
+        <table class="tbl" style="font-size:.82rem">
+          <tr><td style="color:var(--muted)">Algoritmo</td><td>Logistic Regression (sklearn)</td></tr>
+          <tr><td style="color:var(--muted)">Tarea</td><td>Clasificación binaria: ALTO / BAJO riesgo</td></tr>
+          <tr><td style="color:var(--muted)">Features</td><td>5 variables del solicitante</td></tr>
+          <tr><td style="color:var(--muted)">AUC-ROC</td><td><span class="tag tg">0.896</span> — medido y validado</td></tr>
+          <tr><td style="color:var(--muted)">Artefacto</td><td><code>credit_model.joblib</code> en S3</td></tr>
+          <tr><td style="color:var(--muted)">Estado</td><td><span class="tag tg">Entrenado y serializado</span></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Necesidades de despliegue (input al agente)</div>
+        <table class="tbl" style="font-size:.82rem">
+          <tr><td style="color:var(--muted)">Latencia SLA</td><td>&lt; 1 segundo (app móvil)</td></tr>
+          <tr><td style="color:var(--muted)">Frecuencia</td><td>Baja (~500 solicitudes/día)</td></tr>
+          <tr><td style="color:var(--muted)">Payload</td><td>~5 KB (5 variables numéricas)</td></tr>
+          <tr><td style="color:var(--muted)">Presupuesto</td><td>&lt; $50 USD/mes</td></tr>
+          <tr><td style="color:var(--muted)">Escalabilidad</td><td>Media (picos cortos)</td></tr>
+          <tr><td style="color:var(--muted)">Experiencia equipo</td><td>Media</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title">📊 Features del modelo — qué espera el endpoint</div>
+      <table class="tbl">
+        <thead><tr><th>Feature</th><th>Tipo</th><th>Rango</th><th>Influencia en riesgo</th></tr></thead>
+        <tbody>
+          <tr><td><code style="color:var(--cyan)">edad</code></td><td>int</td><td>20–65</td><td style="color:var(--muted)">Baja — variable de contexto</td></tr>
+          <tr><td><code style="color:var(--cyan)">ingresos_mensuales</code></td><td>float</td><td>$800K–$10M COP</td><td><span class="tag tr">Alta</span> — &lt;$1.5M aumenta riesgo</td></tr>
+          <tr><td><code style="color:var(--cyan)">ratio_deuda</code></td><td>float</td><td>0.05–0.95</td><td><span class="tag tr">Muy alta</span> — &gt;0.65 = alto riesgo</td></tr>
+          <tr><td><code style="color:var(--cyan)">meses_historial_crediticio</code></td><td>int</td><td>1–120</td><td><span class="tag to">Media</span> — &lt;6 meses sin historial</td></tr>
+          <tr><td><code style="color:var(--cyan)">num_cuentas_activas</code></td><td>int</td><td>1–10</td><td style="color:var(--muted)">Baja — diversificación</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S5: ESTRUCTURA ══════════════ -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div><h2>Estructura del proyecto (Poetry / src layout)</h2></div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-hdr"><span class="code-lang">tree</span><span class="code-file">week_apr_23/ — proyecto completo</span></div>
+      <pre>week_apr_23/
+├── <span class="fn">pyproject.toml</span>           <span class="cm"># Poetry: deps + scripts CLI</span>
+├── <span class="fn">.env.example</span>             <span class="cm"># Variables AWS (copiar a .env)</span>
+│
+├── src/ml_arch_recommender/
+│   ├── <span class="fn">model/train.py</span>       <span class="cm"># Prepara el artefacto del caso de estudio</span>
+│   ├── <span class="fn">scoring/engine.py</span>    <span class="cm"># Motor multicriterio (Python, también en n8n)</span>
+│   ├── <span class="fn">lambda_function/</span>
+│   │   └── <span class="fn">handler.py</span>       <span class="cm"># Handler AWS Lambda — inferencia del modelo</span>
+│   └── <span class="fn">validation/</span>
+│       ├── <span class="fn">test_endpoint.py</span> <span class="cm"># Prueba directa del endpoint AWS</span>
+│       └── <span class="fn">validate_agent.py</span><span class="cm"># Valida coherencia del agente n8n</span>
+│
+├── <span class="fn">tests/</span>                   <span class="cm"># 13 tests · todos pasando</span>
+├── <span class="fn">deploy/</span>
+│   ├── <span class="fn">build_lambda.sh</span>      <span class="cm"># Empaqueta zip con dependencias</span>
+│   └── <span class="fn">deploy.sh</span>            <span class="cm"># Crea S3 + IAM + Lambda + API GW</span>
+├── <span class="fn">n8n/workflow_export.json</span> <span class="cm"># Workflow importable en n8n</span>
+└── <span class="fn">docs/guide.html</span>          <span class="cm"># Esta guía</span></pre>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S6: IMPLEMENTACIÓN ══════════════ -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div><h2>Implementación paso a paso</h2><div class="section-desc">De cero al demo funcionando en AWS</div></div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">1</div>
+      <div class="s-body">
+        <div class="s-title">Instalar dependencias</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>poetry install       <span class="cm"># crea .venv con todas las deps</span>
+poetry shell         <span class="cm"># activa el entorno</span></pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">2</div>
+      <div class="s-body">
+        <div class="s-title">Preparar el artefacto del modelo (caso de estudio)</div>
+        <div class="s-desc">Genera el archivo .joblib que se subirá a S3 y usará Lambda.</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>poetry run train-model
+<span class="cm"># → data/models/credit_model.joblib  (AUC-ROC: 0.896)</span>
+<span class="cm"># → data/models/model_metadata.json</span></pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">3</div>
+      <div class="s-body">
+        <div class="s-title">Configurar variables de entorno</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>cp .env.example .env
+<span class="cm"># Edita .env: AWS_REGION, MODEL_BUCKET (nombre único), etc.</span>
+<span class="cm"># Prerequisito: aws configure (Access Key + Region)</span></pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">4</div>
+      <div class="s-body">
+        <div class="s-title">Construir paquete Lambda</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>bash deploy/build_lambda.sh
+<span class="cm"># → build/credit_inference.zip (~45 MB con sklearn+numpy)</span></pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">5</div>
+      <div class="s-body">
+        <div class="s-title">Desplegar en AWS (S3 + Lambda + API Gateway)</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>bash deploy/deploy.sh
+<span class="cm"># Al terminar muestra el endpoint:</span>
+<span class="cm"># https://XXXXXX.execute-api.us-east-1.amazonaws.com/prod/predict</span>
+
+echo <span class="str">'API_ENDPOINT=https://XXXXXX...'</span> >> .env</pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">6</div>
+      <div class="s-body">
+        <div class="s-title">Probar endpoint AWS directamente</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>poetry run test-endpoint
+<span class="cm"># Corre 4 casos con resultado esperado → debe ser 4/4 PASS</span></pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">7</div>
+      <div class="s-body">
+        <div class="s-title">Importar workflow en n8n y configurar</div>
+        <div class="s-desc">Settings → Import from file → selecciona <code>n8n/workflow_export.json</code>. Luego agrega la variable <code>API_ENDPOINT</code> en n8n Settings → Variables.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">8</div>
+      <div class="s-body">
+        <div class="s-title">Probar el agente end-to-end</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>poetry run validate --webhook <span class="str">"https://tu-n8n.cloud/webhook/recomendar-arquitectura"</span>
+<span class="cm"># Valida 3 casos: serverless, batch, streaming → debe ser 3/3</span></pre></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="s-num">9</div>
+      <div class="s-body">
+        <div class="s-title">Correr tests unitarios</div>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>poetry run pytest
+<span class="cm"># 13 passed — scoring engine + model training</span></pre></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S7: FLUJO N8N ══════════════ -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div><h2>Flujo n8n — los 6 nodos en detalle</h2><div class="section-desc">Qué hace cada nodo, qué recibe y qué produce</div></div>
+    </div>
+
+    <table class="tbl">
+      <thead><tr><th>#</th><th>Nodo</th><th>Tipo</th><th>Recibe</th><th>Produce</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tb">1</span></td>
+          <td><strong>Webhook Trigger</strong></td>
+          <td><span class="tag tp">Webhook</span></td>
+          <td style="color:var(--muted)">POST del usuario con <code>caso_negocio</code> + <code>datos_prueba</code></td>
+          <td style="color:var(--muted)">El body JSON completo pasa al siguiente nodo</td>
+        </tr>
+        <tr>
+          <td><span class="tag tb">2</span></td>
+          <td><strong>Validar Input</strong></td>
+          <td><span class="tag tp">Code Node</span></td>
+          <td style="color:var(--muted)">El JSON del webhook</td>
+          <td style="color:var(--muted)">Mismo JSON si válido; error 400 si faltan campos requeridos</td>
+        </tr>
+        <tr>
+          <td><span class="tag tb">3</span></td>
+          <td><strong>Motor de Recomendación</strong></td>
+          <td><span class="tag tp">Code Node</span></td>
+          <td style="color:var(--muted)"><code>caso_negocio</code> con los 6 criterios de despliegue</td>
+          <td><span class="tag tg">La recomendación completa</span> con ranking de 5 arquitecturas, scores y justificación</td>
+        </tr>
+        <tr>
+          <td><span class="tag tb">4</span></td>
+          <td><strong>Llamar Endpoint AWS</strong></td>
+          <td><span class="tag to">HTTP Request</span></td>
+          <td style="color:var(--muted)"><code>datos_prueba</code> (los 5 features del modelo)</td>
+          <td style="color:var(--muted)">Respuesta del Lambda: riesgo ALTO/BAJO + probabilidad</td>
+        </tr>
+        <tr>
+          <td><span class="tag tb">5</span></td>
+          <td><strong>Consolidar Respuesta</strong></td>
+          <td><span class="tag tp">Code Node</span></td>
+          <td style="color:var(--muted)">Output del nodo 3 (recomendación) + output del nodo 4 (inferencia)</td>
+          <td style="color:var(--muted)">Un único JSON con todo: recomendación + resultado AWS + validación</td>
+        </tr>
+        <tr>
+          <td><span class="tag tb">6</span></td>
+          <td><strong>Webhook Response</strong></td>
+          <td><span class="tag tg">Respond to Webhook</span></td>
+          <td style="color:var(--muted)">El JSON consolidado del nodo 5</td>
+          <td style="color:var(--muted)">HTTP 200 + JSON final al cliente</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout" style="margin-top:1.25rem">
+      <strong>🔑 El nodo crítico es el 3 (Motor de Recomendación)</strong>
+      Es el corazón del agente. Contiene toda la lógica multicriterio: tablas de scoring por arquitectura, pesos de cada criterio, y el cálculo del score ponderado. El código completo está en <code>n8n/workflow_export.json</code> y su equivalente en Python en <code>src/ml_arch_recommender/scoring/engine.py</code>.
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S8: MOTOR MULTICRITERIO ══════════════ -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div><h2>Motor multicriterio — cómo se calcula la recomendación</h2></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧮 Score del caso Credit Risk (serverless recomendado)</div>
+      <div style="margin-top:.75rem">
+        <div class="score-row"><div class="score-name">Latencia (25%)</div><div class="score-track"><div class="score-fill" style="width:90%"></div></div><div class="score-val">9/10</div></div>
+        <div class="score-row"><div class="score-name">Frecuencia (25%)</div><div class="score-track"><div class="score-fill" style="width:100%"></div></div><div class="score-val">10/10</div></div>
+        <div class="score-row"><div class="score-name">Presupuesto (20%)</div><div class="score-track"><div class="score-fill" style="width:100%"></div></div><div class="score-val">10/10</div></div>
+        <div class="score-row"><div class="score-name">Escalabilidad (15%)</div><div class="score-track"><div class="score-fill" style="width:90%"></div></div><div class="score-val">9/10</div></div>
+        <div class="score-row"><div class="score-name">Experiencia (15%)</div><div class="score-track"><div class="score-fill" style="width:90%"></div></div><div class="score-val">9/10</div></div>
+      </div>
+      <div style="margin-top:1rem;padding:.75rem;background:var(--bg3);border-radius:8px;font-family:monospace;font-size:.82rem;text-align:center">
+        Score = (9×0.25) + (10×0.25) + (10×0.20) + (9×0.15) + (9×0.15) = <strong style="color:var(--green)">9.45 / 10</strong>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title">📊 Ranking completo</div>
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Arquitectura</th><th>Score</th><th>Razón de descarte</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--green);font-weight:700">1°</td><td><strong>Serverless (Lambda + API GW)</strong></td><td><span class="tag tg">9.45</span></td><td style="color:var(--muted)">— Ganador</td></tr>
+          <tr><td>2°</td><td>Batch (S3 + Glue)</td><td><span class="tag tb">7.30</span></td><td style="color:var(--muted)">Latencia inaceptable para tiempo real (&lt;1s)</td></tr>
+          <tr><td>3°</td><td>Containers (ECS Fargate)</td><td><span class="tag tb">6.15</span></td><td style="color:var(--muted)">Costo y complejidad excesivos para baja frecuencia</td></tr>
+          <tr><td>4°</td><td>SageMaker Endpoint</td><td><span class="tag to">5.90</span></td><td style="color:var(--muted)">Mínimo ~$50/mes sin tráfico, overkill para demo</td></tr>
+          <tr><td>5°</td><td>Streaming (Kinesis)</td><td><span class="tag to">5.20</span></td><td style="color:var(--muted)">No hay flujo continuo de datos, overhead innecesario</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S9: VALIDACIÓN ══════════════ -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <div><h2>Validación del caso de estudio</h2><div class="section-desc">Métricas y evidencia para la sustentación</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📏 Qué mides y cómo lo presentas</div>
+      <table class="tbl">
+        <thead><tr><th>Dimensión</th><th>Métrica</th><th>Herramienta</th><th>Umbral</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Coherencia del agente</strong></td><td>% casos con arq. correcta</td><td><code>poetry run validate</code></td><td><span class="tag tg">≥ 80%</span></td></tr>
+          <tr><td><strong>Latencia endpoint</strong></td><td>p50 tiempo respuesta (ms)</td><td><code>poetry run test-endpoint</code></td><td><span class="tag tg">&lt; 300ms warm</span></td></tr>
+          <tr><td><strong>Calidad del modelo</strong></td><td>AUC-ROC en test set</td><td><code>poetry run train-model</code></td><td><span class="tag tg">&gt; 0.80 ✓ (0.896)</span></td></tr>
+          <tr><td><strong>Costo estimado</strong></td><td>USD / mes</td><td>AWS Pricing Calculator</td><td><span class="tag tg">&lt; $5/mes</span></td></tr>
+          <tr><td><strong>Sensibilidad scoring</strong></td><td>¿Cambia arq. al variar inputs?</td><td>3 casos en vivo</td><td><span class="tag tg">Sí varía coherentemente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title">🎯 Demo de sensibilidad — los 3 casos para la sustentación</div>
+      <div class="grid-3" style="margin-top:.75rem">
+        <div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:1rem">
+          <div style="color:var(--green);font-weight:700;margin-bottom:.5rem">→ SERVERLESS</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">latencia: 800ms<br>frecuencia: <b style="color:var(--text)">baja</b><br>presupuesto: <b style="color:var(--text)">$30</b></div>
+        </div>
+        <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:1rem">
+          <div style="color:var(--yellow);font-weight:700;margin-bottom:.5rem">→ BATCH</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">latencia: <b style="color:var(--text)">sin restricción</b><br>frecuencia: baja<br>presupuesto: $300, escala alta</div>
+        </div>
+        <div style="background:rgba(6,182,212,.06);border:1px solid rgba(6,182,212,.3);border-radius:10px;padding:1rem">
+          <div style="color:var(--cyan);font-weight:700;margin-bottom:.5rem">→ STREAMING</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.8">latencia: 200ms<br>frecuencia: <b style="color:var(--text)">continua</b><br>escala alta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S10: ALCANCE ══════════════ -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <div><h2>Alcance del demo de tesis</h2></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color:var(--green)">✅ Lo que SÍ implementas (~3 horas)</div>
+        <div style="font-size:.875rem;line-height:2;color:var(--muted)">
+          ✓ Motor de recomendación multicriterio (n8n)<br>
+          ✓ Endpoint de inferencia real en AWS Lambda<br>
+          ✓ Artefacto del caso de estudio en S3<br>
+          ✓ API Gateway con HTTPS público<br>
+          ✓ 3 casos de prueba con sensibilidad demostrada<br>
+          ✓ Tests unitarios del motor de scoring<br>
+          ✓ Scripts de despliegue automatizados
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:var(--red)">❌ Lo que NO necesitas implementar</div>
+        <div style="font-size:.875rem;line-height:2;color:var(--muted)">
+          ✗ CI/CD pipeline (CodePipeline/GitHub Actions)<br>
+          ✗ Monitoreo y alertas (CloudWatch Alarms)<br>
+          ✗ Autenticación de la API (Cognito/API Keys)<br>
+          ✗ Multi-region deployment<br>
+          ✗ Reentrenamiento automático del modelo<br>
+          ✗ Frontend web / dashboard<br>
+          ✗ Almacenamiento de predicciones (DynamoDB)
+        </div>
+      </div>
+    </div>
+
+    <div class="callout ok" style="margin-top:1rem">
+      <strong>✅ Criterio de suficiencia para sustentación</strong>
+      Es suficiente si puedes demostrar en vivo: (1) el agente recibe criterios y recomienda una arquitectura justificada; (2) al cambiar el parámetro de frecuencia a "continua", recomienda streaming en vez de serverless; (3) el endpoint AWS real responde con la predicción del modelo desplegado en la arquitectura recomendada.
+    </div>
+
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S11: QUÉ VALIDA EL AGENTE ══════════════ -->
+  <div class="section" id="s11">
+    <div class="section-header">
+      <div class="section-num" style="background:linear-gradient(135deg,var(--green),#16a34a)">11</div>
+      <div><h2>Qué valida el agente — las 3 capas</h2><div class="section-desc">Validación de input, base de conocimiento y detección de restricciones</div></div>
+    </div>
+
+    <!-- Capa 1 -->
+    <div class="card">
+      <div class="card-title">🔵 Capa 1 — Validación de input (nodo 2 de n8n)</div>
+      <p style="color:var(--muted);font-size:.875rem;margin-bottom:.9rem">Verifica que el request llegue correctamente antes de evaluar cualquier arquitectura.</p>
+      <table class="tbl">
+        <thead><tr><th>Qué verifica</th><th>Ejemplo de error detectado</th><th>Respuesta del agente</th></tr></thead>
+        <tbody>
+          <tr><td>Campos requeridos presentes</td><td>Falta <code>presupuesto_mensual_usd</code></td><td><span class="tag tr">Error 400</span> con lista de campos faltantes</td></tr>
+          <tr><td>Valores del enum correctos</td><td><code>frecuencia_inferencia: "diaria"</code> (no válido)</td><td>Usa valor default "media" o rechaza</td></tr>
+          <tr><td>Tipos numéricos válidos</td><td><code>latencia_requerida_ms: "rapida"</code></td><td><span class="tag tr">Error 400</span> con campo inválido</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Capa 2 -->
+    <div class="card">
+      <div class="card-title">🟡 Capa 2 — Base de conocimiento con razones documentadas (nodo 3)</div>
+      <p style="color:var(--muted);font-size:.875rem;margin-bottom:.9rem">Cada score del 0-10 tiene una razón trazable basada en comportamiento real de AWS. El agente puede explicar cualquier número que produce.</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+        <div style="background:var(--bg3);border-radius:8px;padding:.9rem;font-size:.8rem">
+          <div style="color:var(--red);font-weight:700;margin-bottom:.4rem">Batch + Latencia ≤1000ms → Score 1/10</div>
+          <div style="color:var(--muted);line-height:1.6">"Batch es inherentemente asíncrono (minutos a horas). Incompatible con SLA de tiempo real. <b style="color:var(--red)">← RESTRICCIÓN DURA</b>"</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.9rem;font-size:.8rem">
+          <div style="color:var(--green);font-weight:700;margin-bottom:.4rem">Serverless + Frecuencia baja → Score 10/10</div>
+          <div style="color:var(--muted);line-height:1.6">"Pay-per-request: $0 cuando no hay tráfico. Free tier AWS Lambda: 1M requests/mes. Ideal para uso esporádico."</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.9rem;font-size:.8rem">
+          <div style="color:var(--red);font-weight:700;margin-bottom:.4rem">SageMaker + Presupuesto $30/mes → Score 2/10</div>
+          <div style="color:var(--muted);line-height:1.6">"ml.t3.medium: ~$38/mes siempre activo. Con presupuesto &lt;$100 representa &gt;38% del budget. <b style="color:var(--red)">← COSTOSO</b>"</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:.9rem;font-size:.8rem">
+          <div style="color:var(--green);font-weight:700;margin-bottom:.4rem">Streaming + Frecuencia continua → Score 10/10</div>
+          <div style="color:var(--muted);line-height:1.6">"Kinesis Data Streams: diseñado exactamente para procesamiento continuo de eventos en tiempo real."</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:.8rem">
+        <div style="color:var(--accent);font-weight:600;margin-bottom:.5rem">Output del razonamiento completo (campo <code>razonamiento_completo</code>):</div>
+        <pre style="padding:0;background:none;font-size:.78rem;color:#abb2bf">RECOMENDACIÓN: Serverless (Lambda + API Gateway) (score 9.45/10)
+
+CRITERIO DECISIVO — Presupuesto (20%): Serverless 10/10 vs SageMaker 2/10
+  Razón: Costo estimado para 10K req/mes: &lt;$1 USD. Free tier cubre demos.
+
+FORTALEZAS DEL GANADOR:
+  • Latencia (25%): 9/10 — Lambda warm ~50–200ms. Adecuado para SLA ≤ 1s.
+  • Frecuencia (25%): 10/10 — $0 sin tráfico. Free tier: 1M requests/mes.
+  • Presupuesto (20%): 10/10 — &lt;$1 para 10K requests/mes.
+  • Escalabilidad (15%): 9/10 — Escala de 0 a miles de instancias en segundos.
+  • Experiencia (15%): 9/10 — Patrón con cientos de ejemplos documentados.
+
+POR QUÉ SE DESCARTARON LAS ALTERNATIVAS:
+  • SageMaker (#2): ~$38/mes siempre activo. &gt;38% del budget. ← COSTOSO
+  • Batch (#3): asíncrono por naturaleza. Incompatible con tiempo real. ← RESTRICCIÓN DURA
+  • Containers (#4): ~$15/mes mínimo. Alta fracción del presupuesto.
+  • Streaming (#5): Kinesis innecesario para uso esporádico. ← INEFICIENTE</pre>
+      </div>
+    </div>
+
+    <!-- Capa 3 -->
+    <div class="card">
+      <div class="card-title">🔴 Capa 3 — Detección de restricciones duras y tensiones</div>
+      <p style="color:var(--muted);font-size:.875rem;margin-bottom:.9rem">Detecta combinaciones de parámetros que un score ponderado no puede capturar solo. Se incluyen como <code>advertencias[]</code> en la respuesta aunque no cambien la recomendación.</p>
+      <table class="tbl">
+        <thead><tr><th>Tipo</th><th>Cuándo se dispara</th><th>Mensaje generado</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="tag tr">restriccion_dura</span></td>
+            <td>Latencia ≤1s + frecuencia <code>alta</code> o <code>continua</code></td>
+            <td style="color:var(--muted);font-size:.8rem">"Batch queda descartado. La arquitectura debe ser reactiva (serverless o streaming)."</td>
+          </tr>
+          <tr>
+            <td><span class="tag to">tension</span></td>
+            <td>Frecuencia <code>continua</code> + presupuesto &lt; $50</td>
+            <td style="color:var(--muted);font-size:.8rem">"Kinesis cobra ~$11/mes/shard siempre activo. Valida si el volumen justifica el costo."</td>
+          </tr>
+          <tr>
+            <td><span class="tag to">tension</span></td>
+            <td>Escalabilidad <code>alta</code> + presupuesto &lt; $50</td>
+            <td style="color:var(--muted);font-size:.8rem">"Las arquitecturas que mejor escalan tienen costo fijo alto. Lambda es la opción más económica."</td>
+          </tr>
+          <tr>
+            <td><span class="tag tb">coherencia</span></td>
+            <td>Ganador requiere experiencia alta, equipo tiene <code>baja</code></td>
+            <td style="color:var(--muted);font-size:.8rem">"La arquitectura recomendada requiere experiencia media-alta. Planifica capacitación."</td>
+          </tr>
+          <tr>
+            <td><span class="tag tb">coherencia</span></td>
+            <td>Payload &lt; 1KB + frecuencia <code>continua</code></td>
+            <td style="color:var(--muted);font-size:.8rem">"El overhead de Kinesis puede superar el payload útil. Considera batching de micro-solicitudes."</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="code-block" style="margin-top:.9rem">
+        <div class="code-hdr"><span class="code-lang">JSON — fragmento de respuesta con advertencias activas</span></div>
+        <pre>{
+  <span class="key">"recomendacion"</span>: { <span class="key">"arquitectura_id"</span>: <span class="str">"streaming"</span>, <span class="key">"score"</span>: <span class="num">7.3</span> },
+  <span class="key">"advertencias"</span>: [
+    {
+      <span class="key">"tipo"</span>: <span class="str">"restriccion_dura"</span>,
+      <span class="key">"mensaje"</span>: <span class="str">"Latencia ≤150ms + frecuencia 'continua': batch queda descartado."</span>
+    },
+    {
+      <span class="key">"tipo"</span>: <span class="str">"tension"</span>,
+      <span class="key">"mensaje"</span>: <span class="str">"Frecuencia 'continua' con presupuesto $40/mes: Kinesis cobra ~$11/mes/shard."</span>
+    },
+    {
+      <span class="key">"tipo"</span>: <span class="str">"coherencia"</span>,
+      <span class="key">"mensaje"</span>: <span class="str">"Streaming requiere experiencia media-alta. Equipo declarado: baja."</span>
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══════════════ S12: FORMATO DEL MODELO ══════════════ -->
+  <div class="section" id="s12">
+    <div class="section-header">
+      <div class="section-num" style="background:linear-gradient(135deg,var(--green),#16a34a)">12</div>
+      <div><h2>Formato del modelo entrenado — cómo conectarlo</h2><div class="section-desc">Qué espera el sistema, en qué formato y cómo sustituir con un modelo real</div></div>
+    </div>
+
+    <div class="focus-box">
+      <h3>📌 El modelo viaja como artefacto serializado (.joblib) almacenado en S3</h3>
+      <p>Lambda no tiene el modelo "adentro". En cada <b>cold start</b>, Lambda descarga el archivo <code>.joblib</code> de S3, lo carga en memoria, y lo reutiliza en todas las invocaciones siguientes (warm). El artefacto es un <b>scikit-learn Pipeline</b> que incluye el preprocesador y el clasificador en un solo objeto.</p>
+    </div>
+
+    <!-- Flujo del artefacto -->
+    <div class="card">
+      <div class="card-title">📦 Ruta del modelo: de tu notebook a AWS</div>
+      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;text-align:center;font-size:.8rem;min-width:120px">
+          <div style="font-size:1.3rem">📓</div>
+          <div style="font-weight:600;margin:.2rem 0">Tu notebook</div>
+          <div style="color:var(--muted)">entrenas el modelo</div>
+        </div>
+        <div style="color:var(--accent);font-size:1.2rem">→</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;text-align:center;font-size:.8rem;min-width:120px">
+          <div style="font-size:1.3rem">💾</div>
+          <div style="font-weight:600;margin:.2rem 0">joblib.dump()</div>
+          <div style="color:var(--muted)">serializa a .joblib</div>
+        </div>
+        <div style="color:var(--accent);font-size:1.2rem">→</div>
+        <div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:.75rem 1rem;text-align:center;font-size:.8rem;min-width:120px">
+          <div style="font-size:1.3rem">🗄️</div>
+          <div style="font-weight:600;margin:.2rem 0">Amazon S3</div>
+          <div style="color:var(--muted)">almacena el artefacto</div>
+        </div>
+        <div style="color:var(--accent);font-size:1.2rem">→</div>
+        <div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:.75rem 1rem;text-align:center;font-size:.8rem;min-width:120px">
+          <div style="font-size:1.3rem">⚡</div>
+          <div style="font-weight:600;margin:.2rem 0">Lambda</div>
+          <div style="color:var(--muted)">carga en cold start</div>
+        </div>
+        <div style="color:var(--green);font-size:1.2rem">→</div>
+        <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:.75rem 1rem;text-align:center;font-size:.8rem;min-width:120px">
+          <div style="font-size:1.3rem">📊</div>
+          <div style="font-weight:600;margin:.2rem 0">Predicción</div>
+          <div style="color:var(--muted)">respuesta en &lt;200ms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formato del artefacto -->
+    <div class="card">
+      <div class="card-title">🔧 Estructura requerida del artefacto</div>
+      <div class="grid-2">
+        <div>
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">El artefacto DEBE ser un Pipeline de scikit-learn:</div>
+          <div class="code-block">
+            <div class="code-hdr"><span class="code-lang">python</span><span class="code-file">Estructura mínima requerida</span></div>
+            <pre><span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> Pipeline
+<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
+<span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LogisticRegression
+<span class="kw">import</span> joblib
+
+<span class="cm"># El pipeline DEBE tener estos dos métodos:</span>
+<span class="cm">#   pipeline.predict(X)        → array [0, 1, ...]</span>
+<span class="cm">#   pipeline.predict_proba(X)  → array [[p0, p1], ...]</span>
+
+pipeline = Pipeline([
+    (<span class="str">"scaler"</span>, StandardScaler()),
+    (<span class="str">"classifier"</span>, LogisticRegression()),
+])
+pipeline.fit(X_train, y_train)
+
+<span class="cm"># Serializar — este archivo va a S3</span>
+joblib.dump(pipeline, <span class="str">"credit_model.joblib"</span>)</pre>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Qué puede cambiar sin modificar el Lambda:</div>
+          <table class="tbl" style="font-size:.8rem">
+            <tr><td><span class="tag tg">✓ Puede cambiar</span></td><td style="color:var(--muted)">El algoritmo interno (RF, XGBoost, SVM, etc.)</td></tr>
+            <tr><td><span class="tag tg">✓ Puede cambiar</span></td><td style="color:var(--muted)">El preprocesador (MinMaxScaler, etc.)</td></tr>
+            <tr><td><span class="tag tg">✓ Puede cambiar</span></td><td style="color:var(--muted)">El número de features (actualizando FEATURE_ORDER)</td></tr>
+            <tr><td><span class="tag tg">✓ Puede cambiar</span></td><td style="color:var(--muted)">El nombre del archivo en S3 (variable env)</td></tr>
+            <tr><td><span class="tag tr">✗ No puede cambiar</span></td><td style="color:var(--muted)">La interfaz: debe tener <code>predict_proba()</code></td></tr>
+            <tr><td><span class="tag tr">✗ No puede cambiar</span></td><td style="color:var(--muted)">El formato de salida: clase 1 = riesgo alto</td></tr>
+          </table>
+          <div class="callout warn" style="margin-top:.75rem;font-size:.8rem">
+            <strong>⚠️ Algoritmos fuera de sklearn</strong>
+            Si usas XGBoost, LightGBM o CatBoost, instálalos en el Lambda Layer. El pipeline de sklearn puede envolver estos modelos.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formato JSON de inferencia -->
+    <div class="card">
+      <div class="card-title">📥 Formato exacto que espera el endpoint (POST /predict)</div>
+      <div class="grid-2">
+        <div>
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem"><b>Caso de estudio actual</b> — 5 features fijas:</div>
+          <div class="code-block">
+            <div class="code-hdr"><span class="code-lang">JSON</span><span class="code-file">POST /predict — body</span></div>
+            <pre>{
+  <span class="key">"edad"</span>: <span class="num">35</span>,                         <span class="cm">← int, años</span>
+  <span class="key">"ingresos_mensuales"</span>: <span class="num">3500000</span>,     <span class="cm">← float, COP</span>
+  <span class="key">"ratio_deuda"</span>: <span class="num">0.35</span>,               <span class="cm">← float, 0.0–1.0</span>
+  <span class="key">"meses_historial_crediticio"</span>: <span class="num">24</span>, <span class="cm">← int, meses</span>
+  <span class="key">"num_cuentas_activas"</span>: <span class="num">3</span>          <span class="cm">← int, cuentas</span>
+}</pre>
+          </div>
+          <div style="margin-top:.5rem;font-size:.78rem;color:var(--muted)">
+            El orden de los campos en el JSON <b>no importa</b>.<br>
+            Lo que importa es que el Lambda construya el vector en el orden correcto:
+            <code style="color:var(--cyan)">FEATURE_ORDER</code> en <code>handler.py</code>.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem"><b>Respuesta exitosa</b> (200 OK):</div>
+          <div class="code-block">
+            <div class="code-hdr"><span class="code-lang">JSON</span><span class="code-file">Response</span></div>
+            <pre>{
+  <span class="key">"riesgo"</span>: <span class="str">"BAJO"</span>,              <span class="cm">← "ALTO" | "BAJO"</span>
+  <span class="key">"probabilidad_riesgo_alto"</span>: <span class="num">0.1823</span>,
+  <span class="key">"probabilidad_riesgo_bajo"</span>: <span class="num">0.8177</span>,
+  <span class="key">"features_recibidas"</span>: { <span class="cm">...echo...</span> },
+  <span class="key">"modelo_version"</span>: <span class="str">"1.0.0"</span>,
+  <span class="key">"arquitectura_despliegue"</span>: <span class="str">"serverless-lambda"</span>
+}</pre>
+          </div>
+          <div style="margin-top:.5rem;font-size:.78rem;color:var(--muted)">
+            <b>prob ≥ 0.5</b> → clasificado como ALTO riesgo<br>
+            <b>prob &lt; 0.5</b> → clasificado como BAJO riesgo<br>
+            El umbral 0.5 se puede ajustar en <code>handler.py</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cómo usar un modelo real distinto -->
+    <div class="card">
+      <div class="card-title">🔄 Cómo adaptar el sistema a un modelo real con features distintas</div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.9rem">Si ya tienen un modelo entrenado (en el notebook de su tesis) con features diferentes, estos son los únicos 3 pasos para integrarlo:</p>
+
+      <div class="step">
+        <div class="s-num">1</div>
+        <div class="s-body">
+          <div class="s-title">Serializar su modelo como Pipeline de sklearn</div>
+          <div class="code-block"><div class="code-hdr"><span class="code-lang">python</span><span class="code-file">en tu notebook</span></div>
+<pre><span class="kw">import</span> joblib
+<span class="cm"># su_pipeline ya entrenado (cualquier algoritmo sklearn-compatible)</span>
+joblib.dump(su_pipeline, <span class="str">"credit_model.joblib"</span>)</pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="s-num">2</div>
+        <div class="s-body">
+          <div class="s-title">Actualizar FEATURE_ORDER en handler.py</div>
+          <div class="code-block"><div class="code-hdr"><span class="code-lang">python</span><span class="code-file">src/ml_arch_recommender/lambda_function/handler.py</span></div>
+<pre><span class="cm"># Cambia esta lista para que coincida con las columnas</span>
+<span class="cm"># en el mismo orden que usaste para entrenar tu modelo</span>
+FEATURE_ORDER = [
+    <span class="str">"tu_feature_1"</span>,
+    <span class="str">"tu_feature_2"</span>,
+    <span class="str">"tu_feature_3"</span>,
+    <span class="cm"># ... los que tenga tu modelo</span>
+]</pre></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="s-num">3</div>
+        <div class="s-body">
+          <div class="s-title">Subir el nuevo .joblib a S3 y redesplegar</div>
+          <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>aws s3 cp credit_model.joblib s3://microcredit-demo-models/models/credit_model.joblib
+bash deploy/build_lambda.sh
+bash deploy/deploy.sh</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variables de entorno del Lambda -->
+    <div class="card">
+      <div class="card-title">⚙️ Variables de entorno que controlan dónde está el modelo</div>
+      <table class="tbl">
+        <thead><tr><th>Variable</th><th>Valor por defecto</th><th>Qué controla</th></tr></thead>
+        <tbody>
+          <tr><td><code style="color:var(--cyan)">MODEL_BUCKET</code></td><td><code>microcredit-demo-models</code></td><td style="color:var(--muted)">Nombre del bucket S3 donde está el artefacto</td></tr>
+          <tr><td><code style="color:var(--cyan)">MODEL_KEY</code></td><td><code>models/credit_model.joblib</code></td><td style="color:var(--muted)">Ruta dentro del bucket al archivo .joblib</td></tr>
+        </tbody>
+      </table>
+      <div class="callout" style="margin-top:.75rem;font-size:.8rem">
+        <strong>ℹ️ Para actualizar el modelo sin redesplegar el código Lambda</strong>
+        Basta con subir un nuevo <code>.joblib</code> a S3 con el mismo nombre. La próxima invocación Lambda (cold start) lo cargará automáticamente sin cambiar ningún código.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 13 — CÓMO EJECUTAR N8N
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="section" id="sec-n8n-run">
+  <div class="sec-hdr">
+    <div class="sec-num">13</div>
+    <div>
+      <div class="sec-title">Cómo ejecutar n8n</div>
+      <div class="sec-sub">3 formas de tenerlo corriendo — local, Docker o cloud gratuito</div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-bottom:1.25rem">
+    <strong>¿Qué es n8n?</strong>
+    n8n es el orquestador de workflows que actúa como <em>cerebro</em> del agente. Recibe el JSON con las características del caso de uso, ejecuta el motor de recomendación en un nodo JavaScript, llama al Lambda AWS si lo necesitas, y devuelve la recomendación estructurada. El agente vive dentro de n8n — los demás componentes son solo infraestructura.
+  </div>
+
+  <!-- Opción 1: n8n Cloud -->
+  <div class="card" style="border-left:3px solid var(--green)">
+    <div class="card-title" style="color:var(--green)">Opción 1 — n8n Cloud (recomendado para la demo del jurado)</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 1rem">Gratis para 1 workflow activo · No necesitas Docker · Accesible desde cualquier dispositivo · URL pública desde el primer día</p>
+    <div class="steps">
+      <div class="step">
+        <div class="s-num">1</div>
+        <div class="s-body">
+          <div class="s-title">Crear cuenta gratuita</div>
+          <p style="color:var(--muted);font-size:.85rem">Ve a <strong>app.n8n.cloud</strong> → "Get started for free" → Regístrate con Google o email.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="s-num">2</div>
+        <div class="s-body">
+          <div class="s-title">Importar el workflow del proyecto</div>
+          <p style="color:var(--muted);font-size:.85rem">En n8n Cloud: menú izquierdo → <strong>Workflows → Import from file</strong> → selecciona <code>n8n/workflow_export.json</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="s-num">3</div>
+        <div class="s-body">
+          <div class="s-title">Configurar variables de entorno</div>
+          <p style="color:var(--muted);font-size:.85rem">Settings → <strong>Variables</strong> → Agregar:</p>
+          <div class="code-block"><div class="code-hdr"><span class="code-lang">env</span></div>
+<pre>API_ENDPOINT  = https://tu-api-id.execute-api.us-east-1.amazonaws.com/prod/predict</pre></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="s-num">4</div>
+        <div class="s-body">
+          <div class="s-title">Activar el workflow y copiar la URL del webhook</div>
+          <p style="color:var(--muted);font-size:.85rem">Haz clic en <strong>Activate</strong> (botón verde). El nodo "Recepción de Caso" mostrará su URL pública — esa es la dirección que llamas con POST.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opción 2: Docker local -->
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <div class="card-title" style="color:var(--accent)">Opción 2 — Docker (entorno local controlado)</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 1rem">Ideal durante desarrollo · Sin límite de workflows · Datos en tu máquina · Requiere Docker Desktop instalado</p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre># Levantar n8n con persistencia de datos
+docker run -d \
+  --name n8n \
+  -p 5678:5678 \
+  -v ~/.n8n:/home/node/.n8n \
+  -e N8N_BASIC_AUTH_ACTIVE=true \
+  -e N8N_BASIC_AUTH_USER=admin \
+  -e N8N_BASIC_AUTH_PASSWORD=demo2026 \
+  n8nio/n8n
+
+# Acceder: http://localhost:5678
+# Usuario: admin  |  Contraseña: demo2026</pre></div>
+    <div class="callout" style="margin-top:.75rem;font-size:.82rem">
+      <strong>Nota:</strong> El flag <code>-v ~/.n8n:/home/node/.n8n</code> persiste tus workflows y credenciales aunque el contenedor se detenga. Sin este flag, perderías todo al reiniciar.
+    </div>
+    <div class="code-block" style="margin-top:.75rem"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre># Parar / reiniciar
+docker stop n8n
+docker start n8n
+
+# Ver logs en tiempo real
+docker logs -f n8n</pre></div>
+  </div>
+
+  <!-- Opción 3: npx -->
+  <div class="card" style="border-left:3px solid var(--purple)">
+    <div class="card-title" style="color:var(--purple)">Opción 3 — npx (sin instalación, solo Node.js)</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 1rem">Sin Docker · Más fácil de arrancar · Solo para pruebas puntuales (no persiste datos por defecto)</p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre># Requiere Node.js 18+
+npx n8n
+
+# n8n queda disponible en http://localhost:5678
+# Ctrl+C para detener</pre></div>
+  </div>
+
+  <!-- Tabla comparativa -->
+  <div class="card">
+    <div class="card-title">Comparativa de opciones</div>
+    <table class="tbl">
+      <thead>
+        <tr><th>Opción</th><th>Instalación</th><th>Persistencia</th><th>URL pública</th><th>Ideal para</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:var(--green)"><strong>n8n Cloud</strong></td>
+          <td style="color:var(--muted)">Ninguna</td>
+          <td style="color:var(--green)">Automática</td>
+          <td style="color:var(--green)">Sí (HTTPS)</td>
+          <td style="color:var(--muted)">Demo al jurado, compartir con equipo</td>
+        </tr>
+        <tr>
+          <td style="color:var(--accent)"><strong>Docker</strong></td>
+          <td style="color:var(--muted)">Docker Desktop</td>
+          <td style="color:var(--green)">Con volumen</td>
+          <td style="color:var(--yellow)">Con ngrok / túnel</td>
+          <td style="color:var(--muted)">Desarrollo, pruebas con datos reales</td>
+        </tr>
+        <tr>
+          <td style="color:var(--purple)"><strong>npx</strong></td>
+          <td style="color:var(--muted)">Solo Node.js</td>
+          <td style="color:var(--red)">No por defecto</td>
+          <td style="color:var(--red)">No</td>
+          <td style="color:var(--muted)">Explorar n8n sin compromisos</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cómo hacer el webhook público con Docker (para el jurado) -->
+  <div class="card">
+    <div class="card-title">Exponer n8n local al mundo con ngrok (si usas Docker)</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 .75rem">Si prefieres Docker pero necesitas una URL pública para la demo, usa ngrok para crear un túnel temporal:</p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre># 1. Instalar ngrok
+brew install ngrok  # macOS
+# o: https://ngrok.com/download
+
+# 2. Crear túnel a n8n
+ngrok http 5678
+
+# ngrok te dará una URL tipo: https://a1b2c3d4.ngrok.io
+# Úsala como base de tu webhook URL en la demo</pre></div>
+    <div class="callout" style="margin-top:.75rem;font-size:.82rem;border-color:var(--yellow)">
+      <strong>Para la tesis:</strong> n8n Cloud es lo más limpio. Obtienes HTTPS gratuito, sin configuración de red, y el jurado puede probar el endpoint desde su propio dispositivo si quieres demostrar acceso distribuido.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 14 — DEMO ANTE EL JURADO
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="section" id="sec-demo">
+  <div class="sec-hdr">
+    <div class="sec-num">14</div>
+    <div>
+      <div class="sec-title">Cómo demostrar el agente ante el jurado</div>
+      <div class="sec-sub">Script completo de la presentación — 3 casos, 15 minutos</div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-bottom:1.25rem;border-color:var(--green)">
+    <strong>Lo que el jurado verá:</strong> Un agente que recibe características de un caso de uso real, razona sobre 5 arquitecturas AWS usando criterios ponderados, detecta restricciones duras, y entrega una recomendación justificada con pasos de configuración — en menos de 1 segundo.
+  </div>
+
+  <!-- Checklist pre-demo -->
+  <div class="card">
+    <div class="card-title">Checklist 10 minutos antes de presentar</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .5rem;font-size:.85rem">
+      <div style="color:var(--muted)">☐ n8n Cloud activo y workflow activado (botón verde)</div>
+      <div style="color:var(--muted)">☐ Lambda AWS desplegada y respondiendo</div>
+      <div style="color:var(--muted)">☐ Terminal abierta con <code>poetry run demo</code> probado</div>
+      <div style="color:var(--muted)">☐ Postman / curl listo con los 3 payloads de abajo</div>
+      <div style="color:var(--muted)">☐ <code>.env</code> con <code>N8N_WEBHOOK_URL</code> configurado</div>
+      <div style="color:var(--muted)">☐ <code>poetry run validate-agent</code> corrido → 3/3 OK</div>
+    </div>
+  </div>
+
+  <!-- Caso 1 -->
+  <div class="card" style="border-left:3px solid var(--green)">
+    <div class="card-title" style="color:var(--green)">Caso 1 — Caso base del proyecto (debería recomendar Serverless)</div>
+    <p style="color:var(--muted);font-size:.83rem;margin:.4rem 0 .8rem">
+      <em>"Startup fintech con modelo de riesgo crediticio. Pocas predicciones al día, presupuesto ajustado, equipo pequeño."</em>
+    </p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>curl -s -X POST "$N8N_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "descripcion": "Modelo de riesgo crediticio microcredit fintech",
+    "tipo_modelo": "clasificacion_binaria",
+    "latencia_requerida_ms": 800,
+    "frecuencia_inferencia": "baja",
+    "volumen_datos_kb": 5,
+    "presupuesto_mensual_usd": 30,
+    "escalabilidad_requerida": "media",
+    "experiencia_tecnica": "media"
+  }' | python3 -m json.tool</pre></div>
+    <div style="margin-top:.75rem;padding:.75rem;background:var(--bg3);border-radius:6px;font-size:.82rem">
+      <strong style="color:var(--green)">Resultado esperado:</strong>
+      <code style="color:var(--cyan)">arquitectura_id: "serverless"</code> — score ~9.4/10
+      <br><span style="color:var(--muted)">El agente destaca: cero costo en reposo, latencia 50ms en warm, sin gestión de servidores.</span>
+    </div>
+    <div style="margin-top:.5rem;font-size:.82rem;color:var(--yellow)">
+      <strong>Qué explicar:</strong> "El agente no solo dice 'serverless' — explica por qué el resto se descartó. Batch no sirve porque la latencia requerida es 800ms. SageMaker tiene costo mínimo $50/mes que supera el presupuesto."
+    </div>
+  </div>
+
+  <!-- Caso 2 -->
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <div class="card-title" style="color:var(--accent)">Caso 2 — Banco grande con scoring nocturno (debería recomendar Batch)</div>
+    <p style="color:var(--muted);font-size:.83rem;margin:.4rem 0 .8rem">
+      <em>"Banco tradicional: re-score de portafolio completo cada noche. Sin necesidad de tiempo real, alto volumen, presupuesto disponible."</em>
+    </p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>curl -s -X POST "$N8N_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "descripcion": "Reentrenamiento y scoring nocturno del portafolio de crédito",
+    "tipo_modelo": "clasificacion_binaria",
+    "latencia_requerida_ms": 86400000,
+    "frecuencia_inferencia": "baja",
+    "volumen_datos_kb": 500000,
+    "presupuesto_mensual_usd": 300,
+    "escalabilidad_requerida": "alta",
+    "experiencia_tecnica": "alta"
+  }' | python3 -m json.tool</pre></div>
+    <div style="margin-top:.75rem;padding:.75rem;background:var(--bg3);border-radius:6px;font-size:.82rem">
+      <strong style="color:var(--accent)">Resultado esperado:</strong>
+      <code style="color:var(--cyan)">arquitectura_id: "batch"</code> — Glue + S3 + Step Functions
+      <br><span style="color:var(--muted)">El agente detecta que la latencia de 24h hace que serverless sea innecesariamente costoso y frágil a esa escala.</span>
+    </div>
+    <div style="margin-top:.5rem;font-size:.82rem;color:var(--yellow)">
+      <strong>Qué explicar:</strong> "El mismo agente, mismo código — diferente caso de uso → diferente arquitectura óptima. Esto demuestra que el motor pondera correctamente el criterio decisivo en cada contexto."
+    </div>
+  </div>
+
+  <!-- Caso 3 -->
+  <div class="card" style="border-left:3px solid var(--purple)">
+    <div class="card-title" style="color:var(--purple)">Caso 3 — Detección de fraude en tiempo real (debería recomendar Streaming)</div>
+    <p style="color:var(--muted);font-size:.83rem;margin:.4rem 0 .8rem">
+      <em>"Plataforma de pagos digitales: cada transacción debe ser evaluada en &lt;200ms. Volumen alto y continuo 24/7."</em>
+    </p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre>curl -s -X POST "$N8N_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "descripcion": "Detección de fraude en tiempo real para plataforma de pagos",
+    "tipo_modelo": "clasificacion_binaria",
+    "latencia_requerida_ms": 200,
+    "frecuencia_inferencia": "continua",
+    "volumen_datos_kb": 2,
+    "presupuesto_mensual_usd": 500,
+    "escalabilidad_requerida": "alta",
+    "experiencia_tecnica": "alta"
+  }' | python3 -m json.tool</pre></div>
+    <div style="margin-top:.75rem;padding:.75rem;background:var(--bg3);border-radius:6px;font-size:.82rem">
+      <strong style="color:var(--purple)">Resultado esperado:</strong>
+      <code style="color:var(--cyan)">arquitectura_id: "streaming"</code> — Kinesis + Lambda Trigger
+      <br><span style="color:var(--muted)">El agente justifica: frecuencia continua hace que serverless por-request sea inestable; Kinesis absorbe picos sin cold starts.</span>
+    </div>
+    <div style="margin-top:.5rem;font-size:.82rem;color:var(--yellow)">
+      <strong>Qué explicar:</strong> "Noten que en el Caso 1 serverless era perfecto para 'baja' frecuencia. Aquí la frecuencia 'continua' es el criterio decisivo que cambia la recomendación."
+    </div>
+  </div>
+
+  <!-- Demo terminal -->
+  <div class="card">
+    <div class="card-title">Alternativa: demo en terminal con el motor Python</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.5rem 0 .75rem">Si n8n no está disponible durante la presentación, el motor Python produce la misma salida en la terminal:</p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">bash</span></div>
+<pre># Caso serverless (default — el caso de estudio del proyecto)
+poetry run demo
+
+# Caso batch (banco grande)
+poetry run demo --caso batch
+
+# Caso streaming (fraude en tiempo real)
+poetry run demo --caso streaming
+
+# Caso personalizado interactivo
+poetry run demo --interactivo</pre></div>
+    <p style="color:var(--muted);font-size:.83rem;margin-top:.75rem">El script <code>src/ml_arch_recommender/demo.py</code> usa Rich para mostrar tablas coloreadas, el razonamiento completo y los pasos de configuración — sin necesidad de n8n ni AWS corriendo.</p>
+  </div>
+
+  <!-- Script narrativo para el jurado -->
+  <div class="card" style="background:rgba(var(--accent-rgb,0,120,215),.06)">
+    <div class="card-title">Narrativa recomendada para los 15 minutos</div>
+    <div style="font-size:.85rem;line-height:1.7;color:var(--text)">
+      <p><strong style="color:var(--accent)">[0:00–2:00]</strong> Contexto: "El problema que resolvemos es que un científico de datos entrena un modelo pero no sabe en qué arquitectura AWS debe desplegarlo. Esta decisión afecta costo, latencia y escalabilidad — y actualmente se hace ad hoc o por intuición."</p>
+      <p><strong style="color:var(--accent)">[2:00–4:00]</strong> Arquitectura del sistema: mostrar el diagrama de la Sección 2 del HTML. "El agente vive en n8n: recibe un JSON con 8 características del caso, ejecuta un motor de scoring multicriterio, y devuelve la arquitectura óptima justificada."</p>
+      <p><strong style="color:var(--accent)">[4:00–7:00]</strong> Demo Caso 1 — Serverless. Ejecutar el curl, mostrar el JSON de respuesta, destacar la justificación y el score 9.4. "El agente no solo recomienda — explica por qué descartó las otras 4 opciones."</p>
+      <p><strong style="color:var(--accent)">[7:00–10:00]</strong> Demo Caso 2 — Batch. "Mismo agente, mismo código. Cambio el presupuesto, el volumen y la latencia tolerada → recomendación diferente con justificación diferente." Mostrar <code>criterio_decisivo</code> en el JSON.</p>
+      <p><strong style="color:var(--accent)">[10:00–12:00]</strong> Demo Caso 3 — Streaming. "Este caso activa una advertencia de restricción dura porque combino latencia baja con frecuencia continua — el agente detecta tensiones que el scoring ponderado solo no capturaría."</p>
+      <p><strong style="color:var(--accent)">[12:00–14:00]</strong> Tests automatizados: <code>poetry run pytest -v</code>. "28 tests validan: correctitud de recomendaciones, calidad del razonamiento, y detección de restricciones."</p>
+      <p><strong style="color:var(--accent)">[14:00–15:00]</strong> Cierre: "El sistema es extensible — la base de conocimiento puede incorporar GCP, Azure, y nuevos criterios. El caso de estudio de riesgo crediticio es reemplazable por cualquier modelo sklearn Pipeline sin cambiar el agente."</p>
+    </div>
+  </div>
+
+  <!-- Preguntas frecuentes del jurado -->
+  <div class="card">
+    <div class="card-title">Preguntas frecuentes del jurado — respuestas preparadas</div>
+    <div style="font-size:.84rem;display:flex;flex-direction:column;gap:.9rem">
+      <div>
+        <strong style="color:var(--cyan)">¿Por qué n8n y no un microservicio Python directo?</strong>
+        <p style="color:var(--muted);margin:.3rem 0 0">n8n permite visualizar el flujo de decisión sin código. Un jurado no técnico puede ver el workflow y entender cada paso. Además, la integración con APIs externas (Lambda AWS) y con otras herramientas (Slack, Notion, Sheets) es nativa — el motor de scoring Python es reutilizable por separado.</p>
+      </div>
+      <div>
+        <strong style="color:var(--cyan)">¿El modelo de crédito es real?</strong>
+        <p style="color:var(--muted);margin:.3rem 0 0">Es sintético con reglas de negocio coherentes (ratio deuda > 65%, ingresos < 1.5M COP → alto riesgo). El foco del proyecto es el agente recomendador, no el modelo. Cualquier sklearn Pipeline con <code>predict_proba()</code> puede sustituirlo sin tocar el agente.</p>
+      </div>
+      <div>
+        <strong style="color:var(--cyan)">¿Cómo garantizan que la recomendación es correcta?</strong>
+        <p style="color:var(--muted);margin:.3rem 0 0">23 tests unitarios en 3 capas: (1) correctitud de la recomendación en escenarios conocidos, (2) calidad del razonamiento — cada criterio tiene una razón documentada de más de 10 caracteres, (3) detección de restricciones duras — batch no puede recomendarse cuando la latencia requerida es ≤1s.</p>
+      </div>
+      <div>
+        <strong style="color:var(--cyan)">¿Pueden extender esto a GCP o Azure?</strong>
+        <p style="color:var(--muted);margin:.3rem 0 0">Sí. El motor de scoring es agnóstico — define <code>ArchitectureId</code> como Literal y agrega entradas en la base de conocimiento <code>_kb_*</code>. Los equivalentes GCP serían Cloud Run (serverless), Dataflow (batch), Pub/Sub + Cloud Run (streaming), GKE (containers), Vertex AI (SageMaker equivalente).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 15 — CATÁLOGO DE SERVICIOS AWS
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="section" id="sec-catalogo">
+  <div class="sec-hdr">
+    <div class="sec-num">15</div>
+    <div>
+      <div class="sec-title">Catálogo de Servicios AWS — cómo enriquece al agente</div>
+      <div class="sec-sub">57 servicios · 6 vectores por servicio · 3 capas de enriquecimiento sin alterar el scoring</div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-bottom:1.25rem">
+    <strong>Principio de diseño:</strong> el catálogo <em>complementa</em> al motor — nunca reemplaza sus reglas. Los scores del motor son contextuales (dependen del caso de uso); los vectores del catálogo son propiedades fijas del servicio. Ambas fuentes dicen cosas distintas y se enriquecen mutuamente.
+  </div>
+
+  <!-- Qué contiene el catálogo -->
+  <div class="card">
+    <div class="card-title">Estructura del catálogo (<code>aws_service_catalog_complete.csv</code>)</div>
+    <table class="tbl">
+      <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th><th>Ejemplo</th></tr></thead>
+      <tbody>
+        <tr><td><code style="color:var(--cyan)">service</code></td><td style="color:var(--muted)">string</td><td style="color:var(--muted)">Nombre oficial del servicio</td><td><code>AWS Lambda</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">description</code></td><td style="color:var(--muted)">string</td><td style="color:var(--muted)">Para qué sirve</td><td style="color:var(--muted)">Ejecuta código sin aprovisionar servidores…</td></tr>
+        <tr><td><code style="color:var(--cyan)">constraints</code></td><td style="color:var(--muted)">string</td><td style="color:var(--muted)">Limitaciones reales del servicio</td><td style="color:var(--muted)">No es la mejor opción para cargas muy pesadas…</td></tr>
+        <tr><td><code style="color:var(--cyan)">official_url</code></td><td style="color:var(--muted)">string</td><td style="color:var(--muted)">Documentación oficial AWS</td><td><code>https://aws.amazon.com/lambda/</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">cost_efficiency</code></td><td style="color:var(--muted)">int 0–5</td><td style="color:var(--muted)">Eficiencia de costo del servicio</td><td><code>4</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">simplicity</code></td><td style="color:var(--muted)">int 0–5</td><td style="color:var(--muted)">Facilidad de adopción</td><td><code>5</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">scalability</code></td><td style="color:var(--muted)">int 0–5</td><td style="color:var(--muted)">Capacidad de escalar horizontalmente</td><td><code>5</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">low_latency</code></td><td style="color:var(--muted)">int 0–5</td><td style="color:var(--muted)">Aptitud para baja latencia</td><td><code>4</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">managed_level</code></td><td style="color:var(--muted)">int 0–5</td><td style="color:var(--muted)">Nivel de gestión administrada por AWS</td><td><code>5</code></td></tr>
+        <tr><td><code style="color:var(--cyan)">beginner_friendly</code></td><td style="color:var(--muted)">int 0–5</td><td style="color:var(--muted)">Apto para equipos sin experiencia</td><td><code>5</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mapeo arquitectura → servicios -->
+  <div class="card">
+    <div class="card-title">Mapeo arquitectura → servicios del catálogo</div>
+    <table class="tbl">
+      <thead><tr><th>Arquitectura</th><th>Servicios en el catálogo</th><th>Servicio principal (cross-validación)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td style="color:var(--green)">serverless</td>
+          <td><code>AWS Lambda</code> · <code>Amazon API Gateway</code> · <code>Amazon S3</code></td>
+          <td><code>AWS Lambda</code></td>
+        </tr>
+        <tr>
+          <td style="color:var(--blue,#4a9eff)">batch</td>
+          <td><code>Amazon S3</code> · <code>AWS Glue</code> · <code>Amazon EventBridge</code></td>
+          <td><code>AWS Glue</code></td>
+        </tr>
+        <tr>
+          <td style="color:var(--purple)">streaming</td>
+          <td><code>Amazon Kinesis</code> · <code>AWS Lambda</code> · <code>Amazon DynamoDB</code></td>
+          <td><code>Amazon Kinesis</code></td>
+        </tr>
+        <tr>
+          <td style="color:var(--yellow)">containers</td>
+          <td><code>Amazon ECS</code> · <code>AWS Fargate</code> · <code>Amazon CloudWatch</code></td>
+          <td><code>Amazon ECS</code></td>
+        </tr>
+        <tr>
+          <td style="color:var(--cyan)">sagemaker</td>
+          <td><code>Amazon SageMaker AI</code> · <code>Amazon CloudWatch</code> · <code>Amazon S3</code></td>
+          <td><code>Amazon SageMaker AI</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Feature 1 -->
+  <div class="card" style="border-left:3px solid var(--yellow)">
+    <div class="card-title" style="color:var(--yellow)">Feature 1 — Enriquecimiento de restricciones</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.4rem 0 .75rem">
+      Cuando el motor detecta una restricción dura (<code>es_restriccion=True</code>) o un score ≤ 3 en un criterio, el campo <code>nota_catalogo</code> del <code>CriterionDetail</code> se puebla automáticamente con el texto <code>constraints</code> del catálogo para el servicio principal de esa arquitectura.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div>
+        <p style="color:var(--muted);font-size:.82rem;margin:0 0 .4rem"><strong>Ejemplo: batch con latencia ≤ 1s</strong></p>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">python</span></div>
+<pre>batch.razonamiento["latencia"]
+  score        = 1
+  es_restriccion = True
+  razon        = "Batch es inherentemente asíncrono
+                  (minutos a horas)..."
+  nota_catalogo = "[AWS Glue] Para consultas ad hoc
+                   simples sobre S3, Athena puede ser
+                   una opción más directa."</pre></div>
+      </div>
+      <div>
+        <p style="color:var(--muted);font-size:.82rem;margin:0 0 .4rem"><strong>Ejemplo: streaming con frecuencia baja</strong></p>
+        <div class="code-block"><div class="code-hdr"><span class="code-lang">python</span></div>
+<pre>streaming.razonamiento["frecuencia"]
+  score        = 2
+  es_restriccion = True
+  razon        = "Montar infraestructura Kinesis
+                  para uso esporádico es costoso..."
+  nota_catalogo = "[Amazon Kinesis] No es la opción
+                   más simple para cargas batch..."</pre></div>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:.75rem;font-size:.82rem">
+      El campo <code>razon</code> nunca se modifica — el catálogo agrega información en <code>nota_catalogo</code> sin sobrescribir el razonamiento del motor.
+    </div>
+  </div>
+
+  <!-- Feature 2 -->
+  <div class="card" style="border-left:3px solid var(--green)">
+    <div class="card-title" style="color:var(--green)">Feature 2 — Fichas de servicios recomendados</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.4rem 0 .75rem">
+      El campo <code>servicios_detalle</code> en <code>RecommendationResult</code> contiene la ficha completa del catálogo para cada servicio de la arquitectura ganadora. Ejemplo para <strong>serverless</strong>:
+    </p>
+    <div class="code-block"><div class="code-hdr"><span class="code-lang">json</span></div>
+<pre>"servicios_detalle": [
+  {
+    "service": "AWS Lambda",
+    "category": "Compute / Serverless",
+    "description": "Ejecuta código sin aprovisionar servidores...",
+    "constraints": "No es la mejor opción para cargas muy pesadas, tiempos largos...",
+    "official_url": "https://aws.amazon.com/lambda/",
+    "vectores": {
+      "cost_efficiency": 4,
+      "simplicity": 5,
+      "scalability": 5,
+      "low_latency": 4,
+      "managed_level": 5,
+      "beginner_friendly": 5
+    }
+  },
+  { "service": "Amazon API Gateway", ... },
+  { "service": "Amazon S3", ... }
+]</pre></div>
+    <p style="color:var(--muted);font-size:.82rem;margin:.75rem 0 0">Útil para el jurado: el output no solo dice "usa Lambda" sino que entrega la descripción oficial, las restricciones conocidas y los vectores de rendimiento del servicio.</p>
+  </div>
+
+  <!-- Feature 3 -->
+  <div class="card" style="border-left:3px solid var(--accent)">
+    <div class="card-title" style="color:var(--accent)">Feature 3 — Cross-validación silenciosa de scores</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.4rem 0 .75rem">
+      Los vectores del catálogo (escala 0–5) se escalan a 0–10 y se comparan con el score del motor para cada criterio mappeable. Las notas solo aparecen cuando la divergencia es ≥ 2 puntos.
+    </p>
+    <table class="tbl">
+      <thead><tr><th>Criterio motor</th><th>Vector catálogo</th><th>Escala</th></tr></thead>
+      <tbody>
+        <tr><td><code>latencia</code></td><td><code>low_latency</code></td><td style="color:var(--muted)">0–5 → ×2 → 0–10</td></tr>
+        <tr><td><code>presupuesto</code></td><td><code>cost_efficiency</code></td><td style="color:var(--muted)">0–5 → ×2 → 0–10</td></tr>
+        <tr><td><code>escalabilidad</code></td><td><code>scalability</code></td><td style="color:var(--muted)">0–5 → ×2 → 0–10</td></tr>
+        <tr><td><code>experiencia</code></td><td><code>beginner_friendly</code></td><td style="color:var(--muted)">0–5 → ×2 → 0–10</td></tr>
+        <tr><td><code>frecuencia</code></td><td style="color:var(--red)">— sin equivalente</td><td style="color:var(--muted)">Excluido intencionalmente</td></tr>
+      </tbody>
+    </table>
+    <div class="code-block" style="margin-top:.75rem"><div class="code-hdr"><span class="code-lang">json</span></div>
+<pre>"notas_validacion_catalogo": [
+  {
+    "criterio": "presupuesto",
+    "servicio_principal": "AWS Lambda",
+    "score_motor": 10.0,
+    "score_catalogo": 8.0,
+    "divergencia": 2.0,
+    "nota": "Motor: 10/10 · Catálogo AWS Lambda (cost_efficiency=4/5 → 8.0/10).
+             Δ=2.0 pts — El motor pondera el presupuesto del caso específico;
+             el catálogo mide la eficiencia de costo del servicio de forma genérica."
+  }
+]</pre></div>
+    <div class="callout" style="margin-top:.75rem;font-size:.82rem;border-color:var(--accent)">
+      <strong>Por qué el motor da presupuesto=10 y el catálogo da 8:</strong>
+      Lambda tiene <code>cost_efficiency=4/5</code> de forma genérica. Para un caso con presupuesto $30/mes y uso esporádico, el motor le da 10 porque el costo real es &lt;$1/mes — más específico que el vector genérico del catálogo. La divergencia confirma que el motor captura el contexto del caso; el catálogo captura la propiedad del servicio. Ambos son correctos.
+    </div>
+  </div>
+
+  <!-- Por qué no más servicios -->
+  <div class="card">
+    <div class="card-title">Por qué no se usan los 57 servicios del catálogo</div>
+    <p style="color:var(--muted);font-size:.85rem;margin:.4rem 0 0">
+      El catálogo incluye servicios como WorkSpaces, Pinpoint, SES, GuardDuty, DMS, FSx y otros que no tienen relación con el despliegue de modelos ML. Integrarlos al motor introduciría ruido. Solo los 10–12 servicios directamente relevantes para los 5 patrones de arquitectura están mapeados. Los demás están disponibles en el CSV para futuros casos de uso (ej: si se extiende el agente a recomendar también pipelines de datos o seguridad).
+    </p>
+  </div>
+</div>
+
+<div style="background:var(--bg2);border-top:1px solid var(--border);padding:1.25rem;text-align:center;color:var(--muted);font-size:.78rem;margin-top:2rem">
+  Agente Recomendador de Arquitecturas ML · Tesis de Maestría en Analítica de Datos · 2026
+  <br><span style="color:var(--text)">Diana Cabrera &nbsp;·&nbsp; Andrea Mercado &nbsp;·&nbsp; Leonardo Lasso</span>
+  <br><span style="color:var(--accent)">Caso de validación: Credit Risk Scoring desplegado en AWS Serverless</span>
+</div>
+
+</body>
+</html>

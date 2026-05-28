@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "algorithm": "LogisticRegression",
+  "features": [
+    "edad",
+    "ingresos_mensuales",
+    "ratio_deuda",
+    "meses_historial_crediticio",
+    "num_cuentas_activas"
+  ],
+  "feature_ranges": {
+    "edad": [
+      20,
+      65
+    ],
+    "ingresos_mensuales": [
+      800000,
+      10000000
+    ],
+    "ratio_deuda": [
+      0.05,
+      0.95
+    ],
+    "meses_historial_crediticio": [
+      1,
+      120
+    ],
+    "num_cuentas_activas": [
+      1,
+      10
+    ]
+  },
+  "metrics": {
+    "auc_roc": 0.8959,
+    "precision_alto": 0.8551,
+    "recall_alto": 0.8082,
+    "f1_alto": 0.831
+  },
+  "training_samples": 800,
+  "test_samples": 200
+}

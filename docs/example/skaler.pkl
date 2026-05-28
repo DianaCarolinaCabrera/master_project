@@ -1,0 +1,11 @@
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+import joblib
+
+# datos fake
+X = np.random.rand(100, 3)
+
+scaler = StandardScaler()
+scaler.fit(X)
+
+joblib.dump(scaler, "scaler.pkl")

@@ -1,0 +1,4 @@
+import joblib
+
+tokenizer = {"dummy": "tokenizer"}
+joblib.dump(tokenizer, "tokenizer.pkl")

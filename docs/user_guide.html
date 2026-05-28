@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Arch Recommender — Guía de Usuario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0B0F1A;
+    --surface: #111827;
+    --card:    #1C2438;
+    --border:  #2A3450;
+    --primary: #FF9900;
+    --emerald: #10B981;
+    --amber:   #F59E0B;
+    --red:     #EF4444;
+    --blue:    #3B82F6;
+    --violet:  #A855F7;
+    --cyan:    #06B6D4;
+    --text:    #F1F5F9;
+    --muted:   #94A3B8;
+    --dim:     #475569;
+    --mono:    'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+
+  /* SIDEBAR NAV */
+  .sidebar { position:fixed; left:0; top:0; bottom:0; width:252px; background:#090E1A; border-right:1px solid var(--border); overflow-y:auto; padding:24px 0; z-index:100; }
+  .sidebar-logo { padding:0 22px 18px; border-bottom:1px solid var(--border); margin-bottom:14px; }
+  .sidebar-logo .brand { font-size:0.95em; font-weight:800; background:linear-gradient(135deg,#FF9900,#FFD166); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .sidebar-logo .sub { font-size:0.66em; color:var(--muted); letter-spacing:0.08em; margin-top:2px; }
+  .nav-sec { font-size:0.63em; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dim); padding:12px 22px 5px; }
+  .nav-item { display:block; padding:7px 22px; font-size:0.84em; color:var(--muted); text-decoration:none; border-left:2px solid transparent; transition:all 0.15s; }
+  .nav-item:hover { color:var(--text); background:rgba(255,255,255,0.03); }
+  .nav-item.active { color:var(--primary); border-left-color:var(--primary); background:rgba(255,153,0,0.06); }
+
+  /* MAIN */
+  .main { margin-left:252px; padding:44px 56px 88px; max-width:1060px; }
+
+  /* HEADER */
+  .page-header { border-bottom:1px solid var(--border); padding-bottom:28px; margin-bottom:44px; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.72em; font-weight:700; letter-spacing:0.04em; margin-bottom:12px; }
+  .badge-guide { background:rgba(6,182,212,0.12); color:var(--cyan); border:1px solid rgba(6,182,212,0.3); }
+  h1 { font-size:2.2em; font-weight:800; line-height:1.2; }
+  h1 span { background:linear-gradient(135deg,#FF9900,#06B6D4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .page-meta { font-size:0.83em; color:var(--dim); margin-top:10px; }
+
+  h2 { font-size:1.3em; font-weight:700; margin:44px 0 14px; display:flex; align-items:center; gap:10px; }
+  h2::before { content:''; display:inline-block; width:3px; height:18px; background:linear-gradient(180deg,var(--primary),rgba(255,153,0,0.3)); border-radius:2px; flex-shrink:0; }
+  h3 { font-size:1.02em; font-weight:700; color:var(--muted); margin:22px 0 8px; }
+  p { color:var(--muted); margin-bottom:12px; }
+  ul, ol { padding-left:20px; color:var(--muted); margin-bottom:12px; }
+  li { margin-bottom:5px; font-size:0.93em; }
+  b, strong { color:var(--text); }
+
+  /* STEP CARDS */
+  .step-flow { counter-reset:steps; }
+  .step-card {
+    display:flex; gap:18px; background:var(--card); border:1px solid var(--border);
+    border-radius:12px; padding:20px 22px; margin:12px 0;
+    transition:border-color 0.2s;
+  }
+  .step-card:hover { border-color:rgba(255,153,0,0.3); }
+  .step-num {
+    width:36px; height:36px; border-radius:50%;
+    background:linear-gradient(135deg,#FF9900,#E07B00);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:0.88em; color:#000; flex-shrink:0; margin-top:2px;
+  }
+  .step-content h3 { margin:0 0 6px; color:var(--text); font-size:0.97em; }
+  .step-content p { margin:0; font-size:0.88em; }
+
+  /* PARAM TABLE */
+  table { width:100%; border-collapse:collapse; margin:14px 0; font-size:0.88em; }
+  th { background:var(--surface); color:var(--muted); font-weight:600; font-size:0.76em; text-transform:uppercase; letter-spacing:0.08em; padding:10px 14px; text-align:left; }
+  td { padding:11px 14px; border-bottom:1px solid var(--border); color:var(--muted); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(255,255,255,0.015); }
+  .td-param { color:var(--text); font-weight:600; font-family:var(--mono); font-size:0.85em; white-space:nowrap; }
+  .td-req { color:var(--red); font-size:0.82em; font-weight:600; }
+  .td-opt { color:var(--emerald); font-size:0.82em; font-weight:600; }
+
+  /* CAN / CANNOT */
+  .can-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:16px 0; }
+  @media(max-width:700px){ .can-grid{grid-template-columns:1fr;} }
+  .can-card { border-radius:12px; padding:20px 22px; }
+  .can-card.yes { background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); }
+  .can-card.no  { background:rgba(239,68,68,0.06);  border:1px solid rgba(239,68,68,0.25); }
+  .can-card h3 { font-size:0.95em; margin-bottom:12px; }
+  .can-card.yes h3 { color:var(--emerald); }
+  .can-card.no  h3 { color:var(--red); }
+  .can-item { display:flex; gap:10px; margin:8px 0; font-size:0.87em; color:var(--muted); }
+  .can-icon { width:20px; flex-shrink:0; font-size:0.95em; margin-top:1px; }
+
+  /* CALLOUT BOXES */
+  .info  { background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.25); border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.88em; color:var(--muted); }
+  .info b { color:var(--blue); }
+  .warn  { background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.88em; color:var(--muted); }
+  .warn b { color:var(--amber); }
+  .tip   { background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.88em; color:var(--muted); }
+  .tip b { color:var(--emerald); }
+  .danger{ background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:14px 18px; margin:14px 0; font-size:0.88em; color:var(--muted); }
+  .danger b { color:var(--red); }
+
+  /* TAB PREVIEW CARDS */
+  .tab-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin:12px 0; }
+  .tab-card .tab-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .tab-card .tab-icon { font-size:1.3em; }
+  .tab-card .tab-title { font-weight:700; font-size:0.97em; }
+  .tab-card p { font-size:0.87em; margin-bottom:8px; }
+
+  /* CODE */
+  pre, code { font-family:var(--mono); font-size:0.84em; background:#0D1117; border:1px solid #21262D; border-radius:8px; color:#E6EDF3; }
+  pre { padding:16px 20px; overflow-x:auto; line-height:1.65; margin:12px 0; }
+  code { padding:2px 6px; }
+
+  /* VALUES */
+  .values-row { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; }
+  .val { background:rgba(255,153,0,0.08); color:var(--primary); border:1px solid rgba(255,153,0,0.2); border-radius:6px; padding:3px 10px; font-size:0.8em; font-family:var(--mono); }
+  .val-blue   { background:rgba(59,130,246,0.08); color:var(--blue); border-color:rgba(59,130,246,0.2); }
+  .val-green  { background:rgba(16,185,129,0.08); color:var(--emerald); border-color:rgba(16,185,129,0.2); }
+  .val-violet { background:rgba(168,85,247,0.08); color:var(--violet); border-color:rgba(168,85,247,0.2); }
+
+  /* YAML */
+  .yaml-section { background:#0D1117; border:1px solid #21262D; border-radius:10px; padding:18px 22px; margin:14px 0; font-family:var(--mono); font-size:0.83em; color:#8B949E; line-height:1.85; }
+  .y-key { color:#79C0FF; }
+  .y-val { color:#A5D6FF; }
+  .y-comment { color:#6E7681; font-style:italic; }
+  .y-section { color:#FFA657; font-weight:600; }
+
+  /* FAQ */
+  .faq-item { border-bottom:1px solid var(--border); padding:18px 0; }
+  .faq-item:last-child { border-bottom:none; }
+  .faq-q { font-weight:700; color:var(--text); margin-bottom:8px; display:flex; gap:10px; align-items:flex-start; }
+  .faq-q::before { content:"Q"; background:rgba(255,153,0,0.15); color:var(--primary); border-radius:4px; padding:1px 7px; font-size:0.78em; font-weight:700; flex-shrink:0; margin-top:3px; }
+  .faq-a { font-size:0.9em; color:var(--muted); padding-left:32px; }
+
+  .divider { height:1px; background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent); margin:36px 0; }
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">🏗️ ML Arch Recommender</div>
+    <div class="sub">GUÍA DE USUARIO v1.0</div>
+  </div>
+  <div class="nav-sec">Introducción</div>
+  <a class="nav-item active" href="#que-es">¿Qué es?</a>
+  <a class="nav-item" href="#requisitos">Requisitos</a>
+  <a class="nav-item" href="#acceso">Cómo acceder</a>
+  <div class="nav-sec">Uso paso a paso</div>
+  <a class="nav-item" href="#paso1">1. Configurar parámetros</a>
+  <a class="nav-item" href="#paso2">2. Analizar arquitectura</a>
+  <a class="nav-item" href="#paso3">3. Explorar alternativas</a>
+  <a class="nav-item" href="#paso4">4. Análisis de servicios</a>
+  <a class="nav-item" href="#paso5">5. Guía de implementación</a>
+  <a class="nav-item" href="#yaml">Cargar YAML</a>
+  <div class="nav-sec">Parámetros</div>
+  <a class="nav-item" href="#params">Referencia completa</a>
+  <a class="nav-item" href="#presets">Casos de ejemplo</a>
+  <div class="nav-sec">Capacidades</div>
+  <a class="nav-item" href="#puede">Lo que puede hacer</a>
+  <a class="nav-item" href="#no-puede">Lo que NO puede hacer</a>
+  <a class="nav-item" href="#brinda">Lo que te brinda</a>
+  <div class="nav-sec">Referencia</div>
+  <a class="nav-item" href="#resultados">Interpretar resultados</a>
+  <a class="nav-item" href="#faq">Preguntas frecuentes</a>
+</nav>
+
+<main class="main">
+
+  <div class="page-header">
+    <div class="badge badge-guide">GUÍA DE USUARIO</div>
+    <h1>Cómo usar el<br><span>ML Arch Recommender</span></h1>
+    <p class="page-meta">Guía completa de uso, parámetros, capacidades y limitaciones &nbsp;·&nbsp; Versión 1.0</p>
+  </div>
+
+  <!-- QUÉ ES -->
+  <section id="que-es">
+    <h2>¿Qué es esta herramienta?</h2>
+    <p>El <b>ML Arch Recommender</b> es una aplicación web que ayuda a data scientists, ingenieros de ML y arquitectos cloud a decidir <em>cuál es la mejor forma de desplegar un modelo de Machine Learning en AWS</em>, según las características específicas de su caso de uso.</p>
+    <p>La herramienta evalúa automáticamente 5 patrones de despliegue (Serverless, Batch, Streaming, Containers, SageMaker) usando 5 criterios ponderados y devuelve una recomendación justificada con nivel de confianza, análisis de costos y guía de implementación.</p>
+    <div class="tip">
+      <b>En resumen:</b> Responde la pregunta &ldquo;¿Dónde y cómo despliego mi modelo en AWS?&rdquo; en menos de 60 segundos, con criterio técnico y económico.
+    </div>
+  </section>
+
+  <!-- REQUISITOS -->
+  <section id="requisitos">
+    <h2>Requisitos</h2>
+    <h3>Para usar la aplicación web (recomendado)</h3>
+    <ul>
+      <li>Navegador web moderno: Chrome 90+, Firefox 88+, Edge 90+, Safari 14+</li>
+      <li>Conexión a internet (solo para cargar la página; el motor funciona sin conexión)</li>
+      <li>No se requiere instalación, registro ni cuenta</li>
+    </ul>
+
+    <h3 style="margin-top:20px">Para ejecutar localmente</h3>
+    <table>
+      <tr><th>Requisito</th><th>Versión mínima</th><th>Notas</th></tr>
+      <tr><td class="td-param">Python</td><td>3.11</td><td>Uso de <code>match/case</code> y type hints modernos</td></tr>
+      <tr><td class="td-param">Poetry</td><td>2.0</td><td>Gestor de dependencias; alternativa: <code>pip install -r requirements.txt</code></td></tr>
+      <tr><td class="td-param">Git</td><td>Cualquiera</td><td>Para clonar el repositorio</td></tr>
+      <tr><td class="td-param">RAM</td><td>512 MB libres</td><td>Streamlit requiere ~200 MB en reposo</td></tr>
+      <tr><td class="td-param">Disco</td><td>~150 MB</td><td>Dependencias Python incluidas</td></tr>
+    </table>
+
+    <h3 style="margin-top:20px">No se requiere</h3>
+    <ul>
+      <li>Cuenta AWS ni credenciales (la versión actual es completamente local)</li>
+      <li>GPU ni hardware especial</li>
+      <li>Docker</li>
+      <li>Base de datos</li>
+    </ul>
+  </section>
+
+  <!-- ACCESO -->
+  <section id="acceso">
+    <h2>Cómo acceder</h2>
+    <h3>Opción A — Aplicación web (sin instalación)</h3>
+    <p>Abre el enlace HTTPS proporcionado en tu navegador. La aplicación carga en ~3 segundos.</p>
+    <div class="info"><b>URL de producción:</b> La URL HTTPS se genera automáticamente al desplegar en Streamlit Cloud. Ver la documentación de despliegue para obtenerla.</div>
+
+    <h3 style="margin-top:20px">Opción B — Ejecución local</h3>
+    <pre>git clone &lt;repositorio&gt;
+cd project_root
+poetry install
+poetry run streamlit run app.py</pre>
+    <p>La aplicación abre automáticamente en <code>http://localhost:8501</code>.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- USO PASO A PASO -->
+  <h2 id="paso1" style="margin-top:0">Paso 1 — Configura los parámetros del modelo</h2>
+  <p>El panel lateral izquierdo contiene el formulario de configuración. Tienes dos formas de llenarlo:</p>
+
+  <div class="step-flow">
+    <div class="step-card">
+      <div class="step-num">A</div>
+      <div class="step-content">
+        <h3>Manualmente — llena cada campo</h3>
+        <p>Ingresa los valores directamente en los campos del panel lateral: descripción del caso, tipo de modelo, latencia requerida, frecuencia de inferencia, presupuesto mensual, escalabilidad, experiencia técnica del equipo y número de features.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">B</div>
+      <div class="step-content">
+        <h3>Desde un archivo YAML — cargar configuración</h3>
+        <p>Descarga la plantilla con el botón <b>⬇️ Descargar plantilla</b>, completa los campos en un editor de texto y sube el archivo con el botón <b>Subir YAML</b>. El formulario se llena automáticamente.</p>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">C</div>
+      <div class="step-content">
+        <h3>Usar un caso de ejemplo</h3>
+        <p>Haz clic en uno de los tres botones de la sección <b>Casos de ejemplo</b>: <b>💳 Fintech</b> (crédito, baja frecuencia), <b>🏦 Banco</b> (batch nocturno), o <b>🚨 Fraude</b> (tiempo real continuo). Los parámetros se llenan automáticamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <section id="paso2">
+    <h2>Paso 2 — Ejecuta el análisis</h2>
+    <p>Haz clic en el botón naranja <b>🔍 Analizar arquitectura</b> en la parte inferior del panel lateral. El motor evalúa los 5 patrones en menos de 1 segundo y carga los resultados en la pantalla principal.</p>
+    <div class="warn"><b>Nota:</b> Si cambias algún parámetro después del análisis, debes volver a hacer clic en el botón para actualizar los resultados. El análisis no se actualiza automáticamente.</div>
+  </section>
+
+  <section id="paso3">
+    <h2>Paso 3 — Explora la recomendación</h2>
+    <p>La pestaña <b>📊 Recomendación</b> muestra los resultados organizados en dos áreas:</p>
+
+    <div class="tab-card">
+      <div class="tab-header">
+        <div class="tab-icon">🏆</div>
+        <div class="tab-title">Panel de detalle (arriba)</div>
+      </div>
+      <p>Muestra la arquitectura seleccionada con su score total (anillo SVG animado), justificación narrativa, criterio decisivo, nivel de confianza, barras de desglose por criterio y chips de servicios AWS requeridos.</p>
+      <p><b>Por defecto muestra la arquitectura #1 (recomendada).</b> Haz clic en <b>Ver →</b> en cualquier fila del ranking para ver el detalle de cualquier otra arquitectura.</p>
+    </div>
+
+    <div class="tab-card">
+      <div class="tab-header">
+        <div class="tab-icon">📋</div>
+        <div class="tab-title">Ranking completo (abajo)</div>
+      </div>
+      <p>Muestra las 5 arquitecturas ordenadas por score, con los scores individuales por criterio (Lat, Frec, Pres, Esc, Exp) y el anillo de score total. La arquitectura actualmente visualizada muestra <b>✓ Viendo</b>; las demás muestran <b>Ver →</b>.</p>
+    </div>
+
+    <div class="tip"><b>Tip:</b> Si aparece una advertencia de restricción dura (🚨), significa que esa arquitectura es técnicamente incompatible con tus parámetros. El motor la descarta automáticamente del ranking efectivo.</div>
+  </section>
+
+  <section id="paso4">
+    <h2>Paso 4 — Analiza la viabilidad con tus servicios</h2>
+    <p>La pestaña <b>🔍 Análisis de servicios</b> responde la pregunta: <em>¿Puedo implementar esta arquitectura con los servicios AWS que ya tiene mi empresa?</em></p>
+
+    <div class="step-flow">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Selecciona la arquitectura a evaluar</h3>
+          <p>El selector muestra automáticamente la arquitectura que tenías seleccionada en la pestaña anterior. Puedes cambiarlo para evaluar cualquiera de las 5.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Consulta el glosario de servicios</h3>
+          <p>Abre el expander <b>📖 Glosario</b> para ver qué hace cada servicio relevante para la arquitectura seleccionada, su categoría y su rol en el despliegue de ML.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Marca los servicios disponibles</h3>
+          <p>Señala todos los servicios AWS que tu organización tiene contratados o autorizados. Los servicios se marcan con 🔵 (requerido), 🟡 (sustituto posible) o ⚪ (otros).</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Haz clic en "Analizar viabilidad"</h3>
+          <p>El sistema determina si puedes implementar la arquitectura con lo que tienes. Si falta algún servicio, propone sustitutos. Si no hay viabilidad, sugiere la alternativa más económica disponible.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="paso5">
+    <h2>Paso 5 — Usa la guía de implementación</h2>
+    <p>La pestaña <b>📘 Guía de implementación</b> genera un plan técnico completo para llevar la arquitectura seleccionada a producción.</p>
+    <table>
+      <tr><th>Sección</th><th>Contenido</th><th>Para qué sirve</th></tr>
+      <tr><td class="td-param">📁 Estructura</td><td>Árbol de directorios del proyecto</td><td>Organizar el repositorio desde el primer día</td></tr>
+      <tr><td class="td-param">📄 Archivos y código</td><td>Archivos clave con código base funcional</td><td>Punto de partida sin escribir desde cero</td></tr>
+      <tr><td class="td-param">🚀 Comandos</td><td>Pasos ordenados con comandos de consola</td><td>Secuencia exacta para el primer despliegue</td></tr>
+      <tr><td class="td-param">🔑 Variables de entorno</td><td>Lista de env vars con ejemplos y marcas de secreto</td><td>Configurar el entorno sin exponer credenciales</td></tr>
+      <tr><td class="td-param">🔐 IAM</td><td>Roles mínimos, permisos y política de mínimo privilegio</td><td>Seguridad desde el diseño, apto para auditorías</td></tr>
+      <tr><td class="td-param">💡 Buena práctica</td><td>Recomendación final específica para la arquitectura</td><td>Evitar el error más común en producción</td></tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- YAML -->
+  <section id="yaml">
+    <h2>Cargar configuración con YAML</h2>
+    <p>El formato YAML permite guardar y compartir configuraciones de casos de uso, automatizar evaluaciones y mantener un historial reproducible de decisiones.</p>
+    <h3>Estructura del archivo</h3>
+    <div class="yaml-section">
+<span class="y-section">modelo</span>:
+  <span class="y-key">nombre</span>:             <span class="y-val">"nombre-descriptivo"</span>
+  <span class="y-key">descripcion</span>:        <span class="y-val">"Qué hace el modelo"</span>     <span class="y-comment"># texto libre</span>
+  <span class="y-key">framework</span>:          <span class="y-val">"sklearn"</span>             <span class="y-comment"># sklearn · pytorch · tensorflow · xgboost · lightgbm · catboost · huggingface</span>
+  <span class="y-key">tipo</span>:               <span class="y-val">"clasificacion_binaria"</span> <span class="y-comment"># ver valores válidos abajo</span>
+  <span class="y-key">sector</span>:             <span class="y-val">"financiero"</span>          <span class="y-comment"># opcional</span>
+  <span class="y-key">num_features</span>:       <span class="y-val">10</span>                    <span class="y-comment"># número entero</span>
+
+<span class="y-section">despliegue</span>:
+  <span class="y-key">latencia_requerida_ms</span>:   <span class="y-val">800</span>    <span class="y-comment"># milisegundos (50 – 86 400 000)</span>
+  <span class="y-key">frecuencia_inferencia</span>:   <span class="y-val">"baja"</span> <span class="y-comment"># baja · media · alta · continua</span>
+  <span class="y-key">presupuesto_mensual_usd</span>: <span class="y-val">50</span>     <span class="y-comment"># USD/mes (5 – 10 000)</span>
+  <span class="y-key">escalabilidad_requerida</span>: <span class="y-val">"media"</span><span class="y-comment"># baja · media · alta</span>
+  <span class="y-key">volumen_datos_kb</span>:              <span class="y-comment"># opcional — se calcula si se omite</span>
+
+<span class="y-section">organizacion</span>:
+  <span class="y-key">experiencia_tecnica</span>: <span class="y-val">"media"</span>  <span class="y-comment"># baja · media · alta</span>
+  <span class="y-key">proveedor_cloud</span>:     <span class="y-val">"aws"</span>
+    </div>
+
+    <h3>Flujo de uso</h3>
+    <ol>
+      <li>Haz clic en <b>⬇️ Descargar plantilla</b> en el panel lateral.</li>
+      <li>Abre el archivo en cualquier editor de texto (VS Code, Notepad, etc.).</li>
+      <li>Modifica los valores según tu caso. Los campos marcados como <em>opcional</em> pueden dejarse en blanco.</li>
+      <li>Guarda el archivo con extensión <code>.yaml</code> o <code>.yml</code>.</li>
+      <li>En la aplicación, haz clic en el área de carga y selecciona el archivo.</li>
+      <li>El formulario se llena automáticamente. Aparece un mensaje verde de confirmación con cuántos campos se cargaron.</li>
+    </ol>
+    <div class="warn"><b>Campos con error:</b> Si un valor no es válido (ej: <code>frecuencia_inferencia: "rapida"</code>), ese campo se omite y los demás se cargan normalmente. Un mensaje rojo indica si no se reconoció ningún campo.</div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- PARÁMETROS -->
+  <section id="params">
+    <h2>Referencia completa de parámetros</h2>
+    <table>
+      <tr><th>Parámetro</th><th>Req.</th><th>Valores válidos</th><th>Guía de selección</th></tr>
+      <tr>
+        <td class="td-param">Descripción del caso</td>
+        <td class="td-req">✓</td>
+        <td>Texto libre</td>
+        <td>Describe brevemente el problema: &ldquo;Score crediticio para app móvil&rdquo;, &ldquo;Detección de fraude en TPV&rdquo;</td>
+      </tr>
+      <tr>
+        <td class="td-param">Tipo de modelo</td>
+        <td class="td-req">✓</td>
+        <td>
+          <div class="values-row">
+            <span class="val">clasificacion_binaria</span>
+            <span class="val">propensity_scoring</span>
+            <span class="val">regression</span>
+            <span class="val">clustering</span>
+            <span class="val">deteccion_fraude</span>
+            <span class="val">scoring_credito</span>
+            <span class="val">churn</span>
+            <span class="val">aml</span>
+          </div>
+        </td>
+        <td>Selecciona el tipo que mejor describe el output de tu modelo</td>
+      </tr>
+      <tr>
+        <td class="td-param">Latencia requerida (ms)</td>
+        <td class="td-req">✓</td>
+        <td>50 – 86 400 000</td>
+        <td>
+          <b>200 ms</b> = fraude real-time &nbsp;·&nbsp;
+          <b>800 ms</b> = app móvil &nbsp;·&nbsp;
+          <b>5 000 ms</b> = score campaña &nbsp;·&nbsp;
+          <b>86 400 000 ms</b> = reproceso nocturno (24h)
+        </td>
+      </tr>
+      <tr>
+        <td class="td-param">Frecuencia de inferencia</td>
+        <td class="td-req">✓</td>
+        <td>
+          <div class="values-row">
+            <span class="val val-green">baja</span>
+            <span class="val val-blue">media</span>
+            <span class="val">alta</span>
+            <span class="val val-violet">continua</span>
+          </div>
+        </td>
+        <td>
+          <b>baja</b> &lt; 1 000 req/día &nbsp;·&nbsp;
+          <b>media</b> 1K–100K req/día &nbsp;·&nbsp;
+          <b>alta</b> &gt; 100K req/día &nbsp;·&nbsp;
+          <b>continua</b> flujo 24/7
+        </td>
+      </tr>
+      <tr>
+        <td class="td-param">Presupuesto mensual (USD)</td>
+        <td class="td-req">✓</td>
+        <td>$5 – $10 000</td>
+        <td>
+          <b>&lt;$50</b> = startup/MVP &nbsp;·&nbsp;
+          <b>$50–$200</b> = pyme &nbsp;·&nbsp;
+          <b>&gt;$200</b> = corporativo
+        </td>
+      </tr>
+      <tr>
+        <td class="td-param">Escalabilidad requerida</td>
+        <td class="td-req">✓</td>
+        <td>
+          <div class="values-row">
+            <span class="val val-green">baja</span>
+            <span class="val val-blue">media</span>
+            <span class="val">alta</span>
+          </div>
+        </td>
+        <td>
+          <b>baja</b> = tráfico predecible y controlado &nbsp;·&nbsp;
+          <b>media</b> = picos ocasionales &nbsp;·&nbsp;
+          <b>alta</b> = picos imprevisibles o crecimiento acelerado
+        </td>
+      </tr>
+      <tr>
+        <td class="td-param">Experiencia técnica</td>
+        <td class="td-req">✓</td>
+        <td>
+          <div class="values-row">
+            <span class="val val-green">baja</span>
+            <span class="val val-blue">media</span>
+            <span class="val">alta</span>
+          </div>
+        </td>
+        <td>
+          <b>baja</b> = primer despliegue cloud &nbsp;·&nbsp;
+          <b>media</b> = experiencia básica AWS sin DevOps &nbsp;·&nbsp;
+          <b>alta</b> = IaC, CI/CD, cloud-native
+        </td>
+      </tr>
+      <tr>
+        <td class="td-param">Número de features</td>
+        <td class="td-req">✓</td>
+        <td>1 – 10 000</td>
+        <td>Usado para estimar el volumen de datos por request: <code>KB = features × 8 / 1024</code></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- PRESETS -->
+  <section id="presets">
+    <h2>Casos de ejemplo predefinidos</h2>
+    <table>
+      <tr><th>Botón</th><th>Caso</th><th>Parámetros clave</th><th>Resultado esperado</th></tr>
+      <tr>
+        <td class="td-param">💳 Fintech</td>
+        <td>Riesgo crediticio — fintech de microcréditos</td>
+        <td>Latencia 800 ms · Frecuencia baja · Presupuesto $30 · Experiencia media</td>
+        <td><b style="color:#10B981">⚡ Serverless</b> — costo &lt; $1/mes</td>
+      </tr>
+      <tr>
+        <td class="td-param">🏦 Banco</td>
+        <td>Rescoring nocturno del portafolio completo</td>
+        <td>Latencia 24h · Frecuencia baja · Presupuesto $300 · Experiencia alta</td>
+        <td><b style="color:#3B82F6">📦 Batch</b> — costo $0.50–$50/mes</td>
+      </tr>
+      <tr>
+        <td class="td-param">🚨 Fraude</td>
+        <td>Detección de fraude en tiempo real — pagos</td>
+        <td>Latencia 200 ms · Frecuencia continua · Presupuesto $500 · Experiencia alta</td>
+        <td><b style="color:#A855F7">🌊 Streaming</b> — costo ~$100/mes</td>
+      </tr>
+    </table>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- LO QUE PUEDE / NO PUEDE -->
+  <section id="puede">
+    <h2>Lo que la herramienta <span style="color:var(--emerald)">SÍ puede hacer</span></h2>
+    <div class="can-grid">
+      <div class="can-card yes">
+        <h3>✅ Recomendaciones</h3>
+        <div class="can-item"><div class="can-icon">✓</div>Recomendar cuál de los 5 patrones AWS es más adecuado para tu modelo y contexto.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Justificar la recomendación con scores cuantitativos y el criterio decisivo.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Detectar incompatibilidades técnicas automáticamente (restricciones duras).</div>
+        <div class="can-item"><div class="can-icon">✓</div>Mostrar el ranking completo con puntuación de las 5 arquitecturas.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Adaptar los pesos según el perfil (startup, equipo sin experiencia).</div>
+      </div>
+      <div class="can-card yes">
+        <h3>✅ Análisis y viabilidad</h3>
+        <div class="can-item"><div class="can-icon">✓</div>Verificar si tus servicios AWS actuales son compatibles con la arquitectura.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Proponer servicios sustitutos cuando faltan los requeridos.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Identificar la alternativa más económica viable dado tu catálogo de servicios.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Mostrar descripciones y conceptos de cada servicio AWS relevante.</div>
+      </div>
+      <div class="can-card yes">
+        <h3>✅ Guías de implementación</h3>
+        <div class="can-item"><div class="can-icon">✓</div>Generar estructura de proyecto lista para producción.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Proveer código base funcional en Python para cada arquitectura.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Listar los comandos exactos de despliegue paso a paso.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Definir variables de entorno con marcas de secreto.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Generar roles IAM con principio de mínimo privilegio.</div>
+      </div>
+      <div class="can-card yes">
+        <h3>✅ Configuración y exportación</h3>
+        <div class="can-item"><div class="can-icon">✓</div>Cargar parámetros desde un archivo YAML.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Descargar la plantilla YAML para documentar el caso.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Comparar múltiples escenarios cambiando los parámetros.</div>
+        <div class="can-item"><div class="can-icon">✓</div>Funcionar completamente sin conexión a internet (motor local).</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="no-puede">
+    <h2>Lo que la herramienta <span style="color:var(--red)">NO puede hacer</span></h2>
+    <div class="can-grid">
+      <div class="can-card no">
+        <h3>❌ No crea la infraestructura</h3>
+        <div class="can-item"><div class="can-icon">✗</div>No provisiona recursos en AWS. Solo genera el código y los pasos para que tú lo hagas.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No ejecuta comandos Terraform, CDK ni CloudFormation de forma automática.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No crea roles IAM, buckets S3 ni funciones Lambda en tu cuenta.</div>
+      </div>
+      <div class="can-card no">
+        <h3>❌ No evalúa tu modelo específico</h3>
+        <div class="can-item"><div class="can-icon">✗</div>No analiza el archivo del modelo (pickle, .pt, joblib). Solo trabaja con los parámetros de despliegue.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No mide la latencia real de inferencia de tu modelo concreto.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No estima el consumo de memoria o CPU real según el tamaño del modelo.</div>
+      </div>
+      <div class="can-card no">
+        <h3>❌ No soporta todos los proveedores cloud</h3>
+        <div class="can-item"><div class="can-icon">✗</div>No genera recomendaciones para GCP (Google Cloud) ni Azure. Solo AWS.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No evalúa infraestructura on-premise ni clouds privadas.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No considera servicios de Kubernetes gestionado (EKS) en esta versión.</div>
+      </div>
+      <div class="can-card no">
+        <h3>❌ Limitaciones del motor</h3>
+        <div class="can-item"><div class="can-icon">✗</div>Los costos mostrados son referenciales (us-east-1). Pueden variar por región, negociación o cambios de precios de AWS.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No predice costos exactos: solo rangos y mínimos de referencia.</div>
+        <div class="can-item"><div class="can-icon">✗</div>No tiene en cuenta restricciones de compliance o regulatorias específicas de tu organización (GDPR, PCI-DSS, etc.).</div>
+        <div class="can-item"><div class="can-icon">✗</div>No reemplaza a un arquitecto cloud certificado para proyectos de alta criticidad.</div>
+      </div>
+    </div>
+    <div class="danger" style="margin-top:20px">
+      <b>Importante:</b> Esta herramienta es un sistema de apoyo a la decisión, no una decisión final. Los scores son orientativos y están basados en una base de conocimiento codificada. Para proyectos de misión crítica o con requisitos regulatorios estrictos, complementa la recomendación con revisión técnica humana.
+    </div>
+  </section>
+
+  <!-- LO QUE BRINDA -->
+  <section id="brinda">
+    <h2>Lo que la herramienta te brinda</h2>
+    <div class="can-grid">
+      <div class="can-card yes">
+        <h3>📊 Claridad en la decisión</h3>
+        <div class="can-item"><div class="can-icon">→</div>Una recomendación objetiva con score 1–10, no solo una opinión.</div>
+        <div class="can-item"><div class="can-icon">→</div>El nivel de confianza de la recomendación (diferencia entre el #1 y el #2).</div>
+        <div class="can-item"><div class="can-icon">→</div>La razón exacta por la que cada arquitectura fue descartada.</div>
+      </div>
+      <div class="can-card yes">
+        <h3>💰 Control de costos</h3>
+        <div class="can-item"><div class="can-icon">→</div>Costos mínimos mensuales referenciales por arquitectura (us-east-1).</div>
+        <div class="can-item"><div class="can-icon">→</div>Alertas automáticas cuando el presupuesto es insuficiente.</div>
+        <div class="can-item"><div class="can-icon">→</div>Alternativa más económica cuando la primera opción no es viable.</div>
+      </div>
+      <div class="can-card yes">
+        <h3>🔐 Seguridad desde el diseño</h3>
+        <div class="can-item"><div class="can-icon">→</div>Roles IAM con permisos mínimos para cada arquitectura.</div>
+        <div class="can-item"><div class="can-icon">→</div>Indicadores de qué variables son secretas y dónde almacenarlas.</div>
+        <div class="can-item"><div class="can-icon">→</div>Visibilidad del endpoint (público/restringido/privado) claramente documentada.</div>
+      </div>
+      <div class="can-card yes">
+        <h3>🚀 Aceleración del proyecto</h3>
+        <div class="can-item"><div class="can-icon">→</div>Código base funcional para empezar el desarrollo sin partir de cero.</div>
+        <div class="can-item"><div class="can-icon">→</div>Estructura de proyecto lista para producción.</div>
+        <div class="can-item"><div class="can-icon">→</div>Comandos exactos de despliegue, probados y documentados.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- INTERPRETAR RESULTADOS -->
+  <section id="resultados">
+    <h2>Cómo interpretar los resultados</h2>
+
+    <h3>Score total (anillo)</h3>
+    <p>Rango 1–10. Es la suma ponderada de los 5 criterios. Un score de <b style="color:var(--emerald)">8.0+</b> indica muy buena compatibilidad. Un score de <b style="color:var(--amber)">5.0–7.9</b> indica compatibilidad moderada con compromisos. Un score de <b style="color:var(--red)">&lt;5.0</b> indica baja compatibilidad o restricciones activas.</p>
+
+    <h3>Nivel de confianza</h3>
+    <p>Porcentaje que refleja la diferencia entre el score del #1 y el #2, normalizada. <b style="color:var(--emerald)">90–100%</b> = decisión clara. <b style="color:var(--amber)">60–89%</b> = decisión con alternativas cercanas. <b style="color:var(--red)">&lt;60%</b> = caso límite, considera revisar los parámetros.</p>
+
+    <h3>Restricciones duras (🚨)</h3>
+    <p>Son incompatibilidades físicas, no preferencias. Si Batch aparece con restricción y latencia &lt; 1 000 ms, no es una sugerencia: Batch es incompatible con ese requisito, sin excepciones.</p>
+
+    <h3>Tensiones (⚠️)</h3>
+    <p>Son alertas no bloqueantes. Indican que hay un conflicto entre parámetros que puede generar costos inesperados o complejidad técnica. No descartan la arquitectura pero requieren atención.</p>
+
+    <h3>Colores de las barras de criterio</h3>
+    <ul>
+      <li><b style="color:var(--emerald)">Verde</b> (≥ 7.5/10) — El criterio es claramente favorable para esta arquitectura</li>
+      <li><b style="color:var(--amber)">Ámbar</b> (4.5–7.4/10) — Compatibilidad parcial, con matices</li>
+      <li><b style="color:var(--red)">Rojo</b> (&lt; 4.5/10) — El criterio es desfavorable o hay restricción activa</li>
+    </ul>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <h2>Preguntas frecuentes</h2>
+    <div>
+      <div class="faq-item">
+        <div class="faq-q">¿Necesito saber de AWS para usar la herramienta?</div>
+        <div class="faq-a">No. La herramienta está diseñada para que un data scientist sin experiencia cloud pueda obtener una recomendación válida. Los parámetros del formulario usan el lenguaje del problema, no el lenguaje de la infraestructura. El glosario de servicios explica qué hace cada servicio AWS.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Los costos mostrados son exactos?</div>
+        <div class="faq-a">Son costos mínimos de referencia para la región us-east-1, basados en el tier más económico de cada servicio. Los costos reales dependen del volumen de tráfico, la región AWS, negociaciones de contratos enterprise y posibles descuentos por Reserved Instances o Savings Plans. Úsalos como punto de partida, no como presupuesto definitivo.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Qué hago si la herramienta recomienda una arquitectura que no puedo implementar?</div>
+        <div class="faq-a">Ve a la pestaña <b>Análisis de servicios</b>, marca los servicios que tienes disponibles y haz clic en <b>Analizar viabilidad</b>. El sistema buscará sustitutos o, si no hay viabilidad, sugerirá la alternativa más económica que sí puedas implementar con lo que tienes.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Puedo confiar en el código de las guías de implementación?</div>
+        <div class="faq-a">El código de las guías es un punto de partida funcional, no código listo para producción sin revisión. Cubre el flujo básico de inferencia. Deberás adaptarlo a tu modelo específico, agregar manejo de errores según tu contexto, y someterlo a revisión de seguridad antes de desplegarlo en producción.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿La herramienta accede a mi cuenta AWS o al archivo de mi modelo?</div>
+        <div class="faq-a">No. La herramienta es completamente local: no hace ninguna llamada a AWS, no accede a archivos de tu sistema (excepto el YAML que tú subes), y no envía datos a servidores externos. Todo el procesamiento ocurre en tu navegador/servidor local.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Puedo evaluar más de 5 arquitecturas o agregar arquitecturas personalizadas?</div>
+        <div class="faq-a">La versión actual evalúa exactamente los 5 patrones soportados (Serverless, Batch, Streaming, Containers, SageMaker). Agregar arquitecturas nuevas requiere modificar el motor (<code>src/ml_arch_recommender/scoring/engine.py</code>) y las guías (<code>src/ml_arch_recommender/demo.py</code>). La arquitectura del código está diseñada para ser extensible.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿Qué pasa si mis parámetros cambian después de elegir una arquitectura?</div>
+        <div class="faq-a">Modifica los parámetros en el panel lateral y haz clic de nuevo en <b>🔍 Analizar arquitectura</b>. Los resultados se actualizan completamente. Esto es especialmente útil para análisis de sensibilidad: cambiar el presupuesto o la frecuencia y ver cómo se modifica el ranking.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">¿La herramienta funciona para modelos de deep learning o solo para modelos clásicos?</div>
+        <div class="faq-a">Funciona para cualquier tipo de modelo. El tipo de framework (sklearn, pytorch, tensorflow, huggingface) se incluye en la configuración YAML pero el motor no penaliza ni favorece arquitecturas por el tipo de framework. Lo que sí importa es si el modelo requiere GPU para inferencia (usa EC2 con instancias GPU, disponible a través de la arquitectura Containers).</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+  <div class="tip" style="margin-top:0">
+    <b>¿Necesitas más ayuda?</b> Consulta la <a href="technical_reference.html" style="color:var(--emerald)">Referencia Técnica</a> para detalles del motor de puntuación, o la <a href="business_pitch.html" style="color:var(--emerald)">Propuesta de Valor</a> para compartir con stakeholders.
+  </div>
+
+</main>
+
+<script>
+  const sections = document.querySelectorAll('[id]');
+  const navLinks = document.querySelectorAll('.nav-item');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 120) current = s.id; });
+    navLinks.forEach(a => { a.classList.toggle('active', a.getAttribute('href') === '#' + current); });
+  });
+</script>
+</body>
+</html>

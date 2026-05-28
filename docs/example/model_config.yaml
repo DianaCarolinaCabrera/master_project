@@ -1,0 +1,210 @@
+site: "MLC"
+product: "POINT"
+audience: "INDIVIDUALS"
+campaign_id: "" # Optional: used only for campaign backtesting
+model_version: "1.0.0"
+
+# Database configuration
+environment: "dev"
+
+# Performance optimization settings
+debug_mode: false  # Set to true for testing with limited data
+debug_limit: 10000  # Number of records to limit in debug mode
+# Note: Removed query_timeout to rely on BigQuery client's default timeouts
+
+# Input/Output table configuration
+queries_base_path: "src/app/model/mlc/individuals/1_0/queries"
+input_table_dataset: "STG"
+#input_table_name: "FINAL_FEATURES_POINT_MLB_INDIVIDUALS"
+input_table_name: "ALL_USERS_UNIVERSE_{site}_{audience}_{product}_{year}{month:02}{day:02}_FINAL"
+output_table_dataset_tbl: "TBL"
+output_table_dataset: "TBL"
+output_table_dataset_stg: "STG"
+output_table_name: "LK_MP_ACQ_MLC_PROPENSITY_SCORES_POINT_INDIVIDUALS"
+output_table_name_hist: "LK_MP_ACQ_POINT_MODEL_HIST"
+output_table_name_last_inference: "LK_MP_ACQ_PROPENSITY_MODELS"
+universe_table_name: "UNIVERSE_POINT_MLC_INDIVIDUALS_20250829"
+
+# SQL query files for data preparation
+create_universe_table: "src/app/model/mlc/individual/1_0/queries/create_universe.sql"
+create_scoring_table: "src/app/model/mlc/individual/1_0/queries/create_scoring_table.sql"
+call_scoring_table: "src/app/model/mlc/individual/1_0/queries/call_scoring_table.sql"
+create_population: "src/app/model/mlc/individual/1_0/queries/01_population.sql"
+create_feature_store: "src/app/model/mlc/individual/1_0/queries/05_feature_store.sql"
+create_final_features: "src/app/model/mlc/individual/1_0/queries/06_final_features.sql"
+insert_historical_data: "src/app/model/mlc/individual/1_0/queries/query_hist.sql"
+
+# Sampling configuration
+sample_size: 1500000
+sample_percentage: 10  # For testing/development
+
+# Model configuration
+models:
+  individuals:
+    name: "mlc_point_individuals_model_2025-09-11_12_10_42.pkl"
+    version: "0.0.3"
+
+
+# Legacy configurations for compatibility
+model_name: "mlc_point_individuals_model_2025-09-11_12_10_42.pkl"
+
+# Scoring configuration
+rating_cuts: [0, 0.244, 0.314, 0.392, 0.427, 0.466, 0.506, 0.545, 0.585, 0.637, 1]
+rating_labels: [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+decile_cuts: [0, 0.244, 0.354, 0.393, 0.418, 0.442, 0.466, 0.5, 0.539, 0.575, 1]
+top3_vars: ["var1", "var2", "var3"]
+number_of_clusters: 5
+
+# Query file paths
+query_files:
+  - "01_population.sql"
+  - "05_feature_store.sql"
+  - "06_final_features.sql"
+  - "07_calculate_bucket.sql"
+
+# Feature mapping for model compatibility
+# Maps original feature names to new standardized feature names
+features: ['PAY_TPV_SEL_L60D',
+    'MAF_MAC_TPN_RATIO_L90D',
+    'MAR_TPV_AMT_USD_L7D',
+    'MAC_TPV_AMT_USD_L7D',
+    'MAR_TPN_L30D',
+    'MAF_TPN_L60D',
+    'MAF_TPV_AMT_USD_L180D',
+    'MAC_TPN_L90D',
+    'NF_RECEIPTS_PER_AGE_DAY_L7D',
+    'MAC_TPN_L30D',
+    'NF_RECEIPTS_PER_AGE_DAY_L30D',
+    'CUST_USES_PROFILE_PHOTO',
+    'MAP_AMT_USD_AVG_L90D',
+    'MAR_TPV_AMT_USD_L60D',
+    'MAF_TPN_L180D',
+    'NF_MAP_INTENSITY_30D',
+    'NF_AVG_TPV_PER_TXN_L30D',
+    'TRACKS_MONEY_IN_MP_QTY_L7D',
+    'NOT_NOTI_EVENT_POINT_SENT_QTY_L30D',
+    'CUST_KYC_SEGMENT_AGE',
+    'MAP_INTENSITY_L30D_LY',
+    'NF_AVG_BUY_TKT_L60D',
+    'MAP_AMT_USD_AVG_L180D',
+    'TRACKS_ML_QTY_L7D',
+    'MAC_TPN_L180D',
+    'INV_ASSET_INVESTED_AMT_L180D',
+    'MAF_TPV_AMT_USD_L90D',
+    'INV_ASSET_INVESTED_AMT_L90D',
+    'NF_AVG_RECEIPT_TKT_L60D',
+    'GMV_BUYER_AMT_USD_L90D',
+    'TRACKS_WALLET_HOME_MOBILE_MP_QTY_L7D',
+    'NF_AVG_BUY_TKT_L180D',
+    'MAP_AMT_USD_AVG_L30D_L180D',
+    'NOT_NOTI_EVENT_SENT_QTY_L30D',
+    'NF_AVG_ORDER_VALUE_L180D',
+    'MAF_TPV_AMT_USD_LY',
+    'MAW_TPN_L30D',
+    'MAP_TPV_AMT_USD_L30D',
+    'NF_AVG_RECEIPT_TKT_L7D',
+    'PAY_TPV_BUY_AVG_L31D_L60D',
+    'NF_AVG_BUY_TKT_L30D',
+    'NF_PAYMENTS_VS_RECEIPTS_L30D',
+    'NF_TOTAL_MONEY_IN_OUT_L60D',
+    'NF_MERCADOPAGO_USE_ON_OFF_L60D',
+    'TRACKS_MOBILE_MP_QTY_L7D',
+    'NF_AVG_BUY_TKT_LY',
+    'NF_RECEIPTS_PER_AGE_DAY_L180D',
+    'NF_RECEIPTS_PER_AGE_DAY_L60D',
+    'GMV_BUYER_AMT_RATIO_L90D_LY',
+    'TRACKS_NOTIFICATION_DESKTOP_ML_QTY_L7D',
+    'NF_AVG_BUY_TKT_L7D',
+    'SHIPPING_COST_BUYER_AMT_USD_LY',
+    'TRACKS_CARDS_MP_QTY_L7D',
+    'MAP2_TPN_LY',
+    'MAP3_TPV_AMT_USD_L7D',
+    'NOT_NOTI_PUSH_SENT_QTY_L90D',
+    'SHIPPING_COST_BUYER_AMT_USD_L180D',
+    'MAW1_TPN_LY',
+    'MAP_TPV_AMT_USD_L7D',
+    'CUST_ANTIQUITY_DAY',
+    'NF_RATIO_PHYSICAL_TO_TOTAL_TPV',
+    'MAF_TPN_L90D',
+    'MAP2_TPV_AMT_USD_L180D',
+    'TRACKS_MOBILE_DESKTOP_RATIO_L180D',
+    'GMV_PROMO_BUYER_AMT_USD_L180D',
+    'NF_MERCADOPAGO_USE_ON_OFF_LY',
+    'MAW_TPN_L180D',
+    'MAP_TPV_AMT_USD_LY',
+    'MAR_TPV_AMT_USD_L90D',
+    'TRACKS_NOTIFICATION_MOBILE_MP_QTY_L7D',
+    'SHIPPING_COST_BUYER_AMT_USD_L90D',
+    'MAP_TPV_AMT_USD_L90D',
+    'MAC_AMT_USD_AVG_L30D',
+    'ORD_BUYER_AVG_TICKET_L90D_L60D',
+    'MAP_TPN_LY',
+    'MAF_TPV_AMT_USD_L60D',
+    'ORD_BUYER_VALUE_AVG_USD_LY',
+    'PAY_TPV_ON_BUY_L30D',
+    'NF_RECEIPTS_PER_AGE_DAY_LY',
+    'NF_AVG_RECEIPT_TKT_L180D',
+    'MAC_TPN_RATIO_L90D_LY',
+    'PAY_TPV_CCARD_BUY_AVG_L30D',
+    'NF_AVG_PAYMENT_TICKET_L30D',
+    'MAP_AMT_USD_AVG_L7D',
+    'MAP2_TPV_AMT_USD_L7D',
+    'MAW_TPN_LY',
+    'PLATFORM_IOS',
+    'CUST_LYL_TOTAL_VALID_POINTS',
+    'CONS_PROP_CREATED_AMT_USD_L30D',
+    'MAR_TPN_L7D',
+    'CUST_BAL_UNAVAILABLE_AMOUNT_USD',
+    'NOT_NOTI_EVENT_SHOWN_QTY_L30D',
+    'TRACKS_DEVICES_MP_QTY_L7D',
+    'NF_SHARE_GMV_BUYER_TO_TOTAL_INFLOWS_L90D',
+    'PAY_TPV_WALLET_AM_BUY_PERC_DELTA_L30D_L60D',
+    'NF_TRACKS_BANKING_SHARE_L7D',
+    'MAC_TPN_L60D',
+    'NF_RATIO_BAL_TOTAL_AMOUNT_MAC_TPV_AMT_L30D',
+    'NF_AVG_RECEIPT_TKT_L30D',
+    'MAC_AMT_USD_AVG_L90D',
+    'MAP1_MAP2_RATIO_L90D',
+    'MAC_AMT_USD_AVG_LY',
+    'NF_RATIO_MAC_TPN_L60D_LY',
+    'NF_AVG_BUY_TKT_L90D',
+    'NF_TRACKS_MOBILE_SHARE_L7D',
+    'TRACKS_CART_MY_CART_ML_QTY_L7D',
+    'TRACKS_DESKTOP_MP_QTY_L7D',
+    'MAP_MAC_TPV_RATIO_L30D',
+    'MAR_TPV_AMT_USD_L180D',
+    'NF_PAYMENTS_VS_RECEIPTS_LY',
+    'MAW2_TPV_AMT_USD_L60D',
+    'PAY_TPV_BUY_L60D',
+    'PAY_TPV_BUY_PERC_DELTA_L30D_L60D',
+    'PAY_TPV_CCARD_BUY_L60D',
+    'NF_TRACKS_CREDITS_SHARE_L7D',
+    'NOT_NOTI_EVENT_OPEN_QTY_L30D',
+    'MAW2_TPV_AMT_USD_L180D',
+    'MAR_TPV_AMT_USD_L30D',
+    'PROP_CREATED_AMT_USD_L30D',
+    'TRACKS_PDP_ML_QTY_L7D',
+    'NF_SHARE_GMV_BUYER_TO_TOTAL_INFLOWS_L180D',
+    'GTW_LAST_TIME_DAYS_CCARD',
+    'TRACKS_BANKING_MOBILE_MP_QTY_L7D',
+    'MAP2_TPV_AMT_USD_LY',
+    'ORD_BUYER_VALUE_AVG_USD_L90D',
+    'CUST_BAL_AVAILABLE_PERC',
+    'MAP_AMT_USD_AVG_LY',
+    'MERC_DE_CRD_AMT_ORIG_USD_L60D',
+    'NF_TENDENCIA_TPV_MP',
+    'MERC_DE_CRD_AMT_ORIG_USD_L30D',
+    'MAP1_TPV_AMT_USD_L180D',
+    'CUST_BAL_TOTAL_AMOUNT_USD',
+    'PAY_TPV_BUY_DELTA_L30D_L60D',
+    'NF_PAYMENTS_VS_RECEIPTS_L60D',
+    'MAP3_TPN_L60D',
+    'MAP3_TPV_AMT_USD_L90D',
+    'MAW2_TPV_AMT_USD_LY',
+    'MAP3_TPV_AMT_USD_LY',
+    'GTW_CARD_MASTER_QTY',
+    'PAY_TPV_WALLET_BUY_DELTA_L30D_L60D',
+    'MAP2_TPV_AMT_USD_L60D',
+    'INV_ASSET_INVESTED_AMT_L30D',
+    'MAC_MAW_TOTAL_AMT_USD_L180D'
+]
